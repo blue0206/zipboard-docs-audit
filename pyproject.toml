@@ -1,0 +1,14 @@
+[project]
+name = "zipboard-docs-audit"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.14"
+dependencies = [
+    "beautifulsoup4>=4.14.3",
+    "httpx>=0.28.1",
+    "openpyxl>=3.1.5",
+    "pandas>=3.0.0",
+    "pydantic-settings>=2.12.0",
+    "ruff>=0.15.0",
+]
