@@ -3,7 +3,7 @@ import httpx
 from urllib.parse import urljoin
 from typing import List
 from bs4 import BeautifulSoup, Tag
-from ..models.scraping_schema import Article, ArticleContent
+from ..models.scraping_schema import Article, ArticleContent, Category
 from ..core.config import env_settings
 
 BASE_URL = env_settings.SCRAPING_BASE_URL
@@ -254,4 +254,69 @@ async def scrape_article(
             has_videos=has_videos,
             has_tables=has_tables,
         )
+
+
+async def scrape_category(
+    client: httpx.AsyncClient, url: str, name: str
+) -> Category | None:
+    """
+    Scrape a help category page and recursively scrape all articles within it.
+
+    Args:
+        client: httpx.AsyncClient instance.
+        url: URL of the category page.
+        name: The name of the category.
+
+    Returns:
+        A Category object containing metadata and a list of scraped Article objects,
+        or None if the category page cannot be retrieved.
+
+    Notes:
+        - Article links are resolved relative to the category URL.
+        - Categories without valid articles are skipped.
+        - The articles are scraped concurrently.
+    """
+
+    category_soup = await get_soup(client, url)
+    if not category_soup:
+        print(f"Failed to retrieve {name} category url.")
+        return None
+
+    # Extract title.
+    title = category_soup.select_one("h1")
+    title = title.get_text(strip=True) if title else "No Title"
+
+    # Extract description.
+    description = category_soup.select_one("p.descrip")
+    description = description.get_text(strip=True) if description else None
+
+    # Extract paylods for each article in the category by retrieving the HTML content
+    # from the article links on the category page and parsing it.
+    tasks = []
+    article_links = category_soup.select("a[href*='/article/']")
+    category_articles: List[Article] = []
+
+    for link in article_links:
+        article_url = urljoin(url, link["href"])  # type: ignore
+        article_name = link.get_text(strip=True)
+
+        tasks.append(scrape_article(client, article_url, article_name))
+
+    category_articles = await asyncio.gather(*tasks)
+    category_articles = [
+        article for article in category_articles if article is not None
+    ]
+
+    # Extract category ID from URL (e.g. '293' in /category/293-lambdatest-integration)
+    category_id = (
+        url.split("/")[-1].split("-")[0] if "-" in url.split("/")[-1] else "Unknown"
+    )
+
+    return Category(
+        category_id=category_id,
+        category_title=title,
+        category_description=description,
+        articles=category_articles,
+        total_articles=len(category_articles),
+    )
 
