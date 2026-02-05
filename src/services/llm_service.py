@@ -124,7 +124,7 @@ class LLMService:
                     instructions=system_prompt,
                     input=input,
                     text_format=response_format,
-                    temperature=0.4
+                    temperature=self._get_temperature(mode)
                 )
                 
                 content = response.output_parsed
