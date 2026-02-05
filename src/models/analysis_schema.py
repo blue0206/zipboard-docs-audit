@@ -22,6 +22,10 @@ class ArticleAnalysisOutput(BaseModel):
     identified_gaps: List[str]
     quality_score: int = Field(ge=1, le=5)
 
+class ArticleAnalysisResult(BaseModel):
+    article_id: str
+    analysis: ArticleAnalysisOutput
+
 class ArticlesCatalogue(BaseModel):
     article_id: str
     article_title: str

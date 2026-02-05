@@ -3,10 +3,10 @@ from typing import List
 from models.llm_schema import GuardrailResult
 from openai.types.responses import ResponseInputParam
 from ..services.llm_service import llm_service
-from ..models.analysis_schema import ArticleAnalysisInput, ArticleAnalysisOutput
+from ..models.analysis_schema import ArticleAnalysisInput, ArticleAnalysisOutput, ArticleAnalysisResult
 
 
-async def analyze_articles(articles: List[ArticleAnalysisInput]) -> List[ArticleAnalysisOutput]:
+async def analyze_articles(articles: List[ArticleAnalysisInput]) -> List[ArticleAnalysisResult]:
     """
     This function takes in a list of LLM-ready article inputs, and runs the
     article analysis for each article concurrently with a limit of 4 concurrent requests.
@@ -23,7 +23,7 @@ async def analyze_articles(articles: List[ArticleAnalysisInput]) -> List[Article
     semaphore = asyncio.Semaphore(4)
 
     results = await asyncio.gather(*[run_article_analysis(a, semaphore) for a in articles])
-    results = [result for result in results if result is not None]
+    results = [ArticleAnalysisResult(article_id=article.article_id, analysis=result) for result, article in zip(results, articles) if result is not None]
 
     return results
 
