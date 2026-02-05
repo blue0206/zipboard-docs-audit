@@ -45,6 +45,9 @@ async def get_soup(client: httpx.AsyncClient, url: str) -> BeautifulSoup | None:
         # Back off and try again if rate-limited.
         if response.status_code == 429:
             print("⚠️ Rate limited. Backing off...")
+            # Remove url from seen_url to retry later.
+            seen_url.remove(url)
+
             await asyncio.sleep(4)
             return await get_soup(client, url)
 
