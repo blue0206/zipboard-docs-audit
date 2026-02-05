@@ -1,0 +1,108 @@
+from typing import List
+from ..models.analysis_schema import ArticleAnalysisInput
+from ..models.scraping_schema import Article, Collection
+
+
+def normalize_scraped_articles(
+    collections: List[Collection],
+) -> List[ArticleAnalysisInput]:
+    """
+    This function normalizes the scraped articles into LLM-ready context by: 
+        - trimming tree-like heirarchy
+        - providing all necessary metadata at (same) article level, and
+        - normalizing article content array.
+    
+    Args:
+        - collections: The entire scraped payload returned by scraper.
+    
+    Returns:
+        A list of LLM-ready articles with relevant metadata and trimmed context
+        to save tokens.
+    """
+    normalized_articles: List[ArticleAnalysisInput] = []
+    for collection in collections:
+        for category in collection.categories:
+            for article in category.articles:
+                normalized_articles.append(
+                    ArticleAnalysisInput(
+                        article_id=article.article_id,
+                        article_title=article.article_title,
+                        category=category.category_title,
+                        collection=collection.collection_title,
+                        url=article.url,
+                        has_screenshots=article.has_screenshots,
+                        has_videos=article.has_videos,
+                        has_tables=article.has_tables,
+                        last_updated=article.last_updated,
+                        word_count=article.word_count,
+                        content=normalize_article_content_to_markdown(article),
+                    )
+                )
+
+    return normalized_articles
+
+
+def normalize_article_content_to_markdown(article: Article) -> str:
+    """
+    This function trims article content from multiple empty-ish blocks to
+    markdown string to save tokens. To prevent content from being too long,
+    the final markdown content is limited to 11,000 characters.
+    
+    Args:
+        - article: The article payload which forms a part of scraped data.
+    
+    Returns:
+        A markdown string representing entire article content, trimmed in case
+        exceeding limit.
+    """
+
+    md_lines: List[str] = []
+
+    md_lines.append(f"Title: {article.article_title}")
+    md_lines.append(f"URL: {article.url}")
+    md_lines.append("---- Content ----")
+
+    for block in article.content:
+        text = block.text if block.text else ""
+
+        # Handle headings.
+        if block.type == "heading":
+            prefix = "#" * (block.level or 1)
+            md_lines.append(f"{prefix} {text}")
+
+        # Handle paragraphs.
+        elif block.type == "paragraph":
+            md_lines.append(text)
+
+        # Handle lists.
+        elif block.type == "list":
+            if block.items:
+                # Use number for ordered lists.
+                li_marker = "1." if block.ordered else "-"
+                for item in block.items:
+                    md_lines.append(f"{li_marker} {item}")
+
+        # Handle images (just alt text).
+        elif block.type == "image":
+            md_lines.append(f"Image: {block.alt or 'Image'}")
+
+        # Handle videos (just platform).
+        elif block.type == "video":
+            md_lines.append(f"Video: {block.platform}")
+
+        # Handle callouts.
+        elif block.type == "callout":
+            # Variant provides context about whether callout is info or warn.
+            md_lines.append(f"Callout ({block.variant}): ")
+            md_lines.append(f"> {text}")
+
+        # Handle tables.
+        elif block.type == "table":
+            if block.headers:
+                md_lines.append(f"| {'|'.join(block.headers)} |")
+            if block.rows:
+                for row in block.rows:
+                    md_lines.append(f"| {'|'.join(row)} |")
+
+    markdown_content = "\n".join(md_lines)
+    return markdown_content[:11000]
