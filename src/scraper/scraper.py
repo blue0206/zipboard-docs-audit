@@ -3,7 +3,7 @@ import httpx
 from urllib.parse import urljoin
 from typing import List
 from bs4 import BeautifulSoup, Tag
-from ..models.scraping_schema import Article, ArticleContent, Category
+from ..models.scraping_schema import Article, ArticleContent, Category, Collection
 from ..core.config import env_settings
 
 BASE_URL = env_settings.SCRAPING_BASE_URL
@@ -318,5 +318,57 @@ async def scrape_category(
         category_description=description,
         articles=category_articles,
         total_articles=len(category_articles),
+    )
+
+
+async def scrape_collection(
+    client: httpx.AsyncClient, url: str, name: str
+) -> Collection | None:
+    """
+    Scrape a collection page and recursively scrape all categories under it.
+
+    Args:
+        client: httpx.AsyncClient instance.
+        url: URL of the collection page.
+        name: The name of the collection.
+
+    Returns:
+        A Collection object containing all categories and their articles,
+        or None if the collection page cannot be retrieved.
+
+    Notes:
+        - Though async, the categories are scraped sequentially to avoid rate-limiting as there are many categories.
+        - We do not use a semaphore for categories because ultimately we need the article content to be scraped concurrently.
+        - Concurrent scraping of categories with semaphore is almost redundant as articles already use a semaphore and can only be fetched 2 at a time (and almost all categories have multiple articles).
+    """
+
+    collection_soup = await get_soup(client, url)
+    if not collection_soup:
+        print(f"Failed to retrieve {name} collection url.")
+        return None
+
+    # Extract payloads (article + category details) for each category
+    # in the collection using category URLs found on the collection page.
+    category_links = collection_soup.select("a[href*='/category/']")
+    categories: List[Category] = []
+
+    for link in category_links:
+        category_url = urljoin(url, link["href"])  # type: ignore
+        category_name = link.get_text(strip=True)
+
+        category_payload = await scrape_category(client, category_url, category_name)
+        if category_payload:
+            categories.append(category_payload)
+
+    # Extract collection ID from URL (e.g. '366' in /collection/366-zipboard-users)
+    collection_id = (
+        url.split("/")[-1].split("-")[0] if "-" in url.split("/")[-1] else "Unknown"
+    )
+
+    return Collection(
+        collection_id=collection_id,
+        collection_title=name,
+        categories=categories,
+        total_categories=len(categories),
     )
 
