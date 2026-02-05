@@ -372,3 +372,46 @@ async def scrape_collection(
         total_categories=len(categories),
     )
 
+
+async def run_scraper() -> List[Collection]:
+    """
+    Entry point for scraping the entire zipBoard help docs.
+
+    This function:
+        - Fetches the base help docs page
+        - Discovers all collections
+        - Recursively scrapes categories and articles
+        - Returns a fully structured representation of the documentation
+
+    Returns:
+        A list of Collection objects representing the complete help docs.
+
+    Notes:
+        - Since collections are few (3), they are scraped concurrently.
+        - The scraper respects rate-limiting by controlling concurrency and adding delays.
+    """
+
+    collections: List[Collection] = []
+    async with httpx.AsyncClient(follow_redirects=True) as client:
+        print("Starting scraper....")
+        soup = await get_soup(client, BASE_URL)
+        if not soup:
+            print("Failed to retrieve the Base URL.")
+            return []
+
+        # Extract collection links from the base url page and scrape them concurrently.
+        collection_links = soup.select("a[href*='/collection/']")
+        tasks = []
+
+        for link in collection_links:
+            collection_url = urljoin(BASE_URL, link["href"])  # type: ignore
+            collection_name = link.get_text(strip=True)
+
+            tasks.append(scrape_collection(client, collection_url, collection_name))
+
+        payloads = await asyncio.gather(*tasks)
+        collections.extend([payload for payload in payloads if payload is not None])
+
+    # Clear seen_url for future runs.
+    seen_url.clear()
+    return collections
