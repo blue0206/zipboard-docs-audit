@@ -102,14 +102,19 @@ class LLMService:
             # Set model based on mode
             if mode == "gap_analysis":
                 model = GAP_ANALYSIS_MODEL
+                response_format = GapAnalysisOutput
             elif mode == "article_analysis":
                 model = self._get_next_article_analysis_model()
+                response_format = ArticleAnalysisOutput
             elif mode == "competitor_analysis":
                 model = COMPETITOR_ANALYSIS_MODEL
+                response_format = CompetitorAnalysisOutput
             elif mode == "judge_gap_analysis":
                 model = JUDGE_MODEL
+                response_format = GuardrailResult
             else:
                 model = SAFEGUARD_MODEL
+                response_format = GuardrailResult
 
             try:
                 print(f"🤖 Req: {model} | Attempt {attempt+1}")
