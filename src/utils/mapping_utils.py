@@ -1,5 +1,10 @@
-from typing import List
-from ..models.analysis_schema import ArticleAnalysisInput
+from typing import Dict, List
+from ..models.analysis_schema import (
+    ArticleAnalysisInput,
+    ArticleAnalysisOutput,
+    ArticleAnalysisResult,
+    ArticlesCatalogue,
+)
 from ..models.scraping_schema import Article, Collection
 
 
@@ -7,14 +12,14 @@ def normalize_scraped_articles(
     collections: List[Collection],
 ) -> List[ArticleAnalysisInput]:
     """
-    This function normalizes the scraped articles into LLM-ready context by: 
+    This function normalizes the scraped articles into LLM-ready context by:
         - trimming tree-like heirarchy
         - providing all necessary metadata at (same) article level, and
         - normalizing article content array.
-    
+
     Args:
         - collections: The entire scraped payload returned by scraper.
-    
+
     Returns:
         A list of LLM-ready articles with relevant metadata and trimmed context
         to save tokens.
@@ -47,10 +52,10 @@ def normalize_article_content_to_markdown(article: Article) -> str:
     This function trims article content from multiple empty-ish blocks to
     markdown string to save tokens. To prevent content from being too long,
     the final markdown content is limited to 11,000 characters.
-    
+
     Args:
         - article: The article payload which forms a part of scraped data.
-    
+
     Returns:
         A markdown string representing entire article content, trimmed in case
         exceeding limit.
@@ -106,3 +111,53 @@ def normalize_article_content_to_markdown(article: Article) -> str:
 
     markdown_content = "\n".join(md_lines)
     return markdown_content[:11000]
+
+
+def normalize_analyzed_articles_to_catalogue(
+    analyzed_articles: List[ArticleAnalysisResult], articles: List[ArticleAnalysisInput]
+) -> List[ArticlesCatalogue]:
+    """
+    This function combines the original article metadata with the analysis output
+    from LLM to create a catalogue of articles with insights for spreadsheet display.
+
+    Args:
+        - analyzed_article: The list of analyzed articles returned by LLM after analysis.
+        - articles: The original list of LLM-ready articles used for analysis.
+
+    Returns:
+        A list of articles with combined metadata, analysis and gaps for spreadsheet display.
+    """
+
+    analysis_map: Dict[str, ArticleAnalysisOutput] = {
+        result.article_id: result.analysis for result in analyzed_articles
+    }
+
+    catalogue: List[ArticlesCatalogue] = []
+
+    for article in articles:
+        analysis = analysis_map.get(article.article_id)
+
+        if not analysis:
+            continue
+
+        catalogue.append(
+            ArticlesCatalogue(
+                article_id=article.article_id,
+                article_title=article.article_title,
+                category=article.category,
+                collection=article.collection,
+                has_screenshots=article.has_screenshots,
+                has_videos=article.has_videos,
+                has_tables=article.has_tables,
+                last_updated=article.last_updated,
+                url=article.url,
+                word_count=article.word_count,
+                content_type=analysis.content_type,
+                topics_covered=analysis.topics_covered,
+                quality_score=analysis.quality_score,
+                target_audience=analysis.target_audience,
+                identified_gaps=analysis.identified_gaps,
+            )
+        )
+
+    return catalogue
