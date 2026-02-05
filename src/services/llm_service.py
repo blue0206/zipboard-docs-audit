@@ -2,6 +2,7 @@ import asyncio
 from typing import Literal
 from httpx import Headers
 from openai import AsyncOpenAI, APIStatusError
+from openai.types.responses import ResponseInputParam
 from models.llm_schema import GuardrailResult
 from ..core.config import env_settings
 from ..models.analysis_schema import ArticleAnalysisOutput, CompetitorAnalysisOutput, GapAnalysisOutput
@@ -80,7 +81,7 @@ class LLMService:
     async def get_llm_response(
         self, 
         system_prompt: str, 
-        user_prompt: str,
+        input: ResponseInputParam,
         mode: Literal["article_analysis", "gap_analysis", "judge_gap_analysis", "output_guardrail", "competitor_analysis"]
     ) -> ArticleAnalysisOutput | GapAnalysisOutput | CompetitorAnalysisOutput | GuardrailResult | None:
         """
@@ -116,10 +117,8 @@ class LLMService:
                 response = await self.client.responses.parse(
                     model=model,
                     instructions=system_prompt,
-                    input=[
-                        {"role": "user", "content": user_prompt}
-                    ],
-                    text_format=ArticleAnalysisOutput if mode == "article_analysis" else GapAnalysisOutput,
+                    input=input,
+                    text_format=response_format,
                     temperature=0.4
                 )
                 
@@ -148,3 +147,5 @@ class LLMService:
                 print(f"Exception occurred: {e}")
                 
         return None
+
+llm_service = LLMService()
