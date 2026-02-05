@@ -1,4 +1,5 @@
-from pydantic import BaseModel
+from typing import List, Literal
+from pydantic import BaseModel, Field
 
 class ArticleAnalysisInput(BaseModel):
     article_id: str
@@ -13,3 +14,10 @@ class ArticleAnalysisInput(BaseModel):
     has_tables: bool
     content: str
 
+class ArticleAnalysisOutput(BaseModel):
+    primary_topic: str
+    topics_covered: List[str]
+    content_type: Literal["how_to", "conceptual", "faq", "troubleshooting", "mixed", "reference"]
+    target_audience: Literal["beginner", "intermediate", "advanced", "mixed"]
+    identified_gaps: List[str]
+    quality_score: int = Field(ge=1, le=5)
