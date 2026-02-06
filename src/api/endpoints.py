@@ -28,11 +28,11 @@ router = APIRouter(prefix="/articles", tags=["Articles"])
 @router.get(
     "/", response_model=ApiResponse, dependencies=[Depends(authenticate_request)]
 )
-async def get_articles(background_tasks: BackgroundTasks, concurrency: int = 2, limit: int = 16) -> ApiResponse:
+async def get_articles(background_tasks: BackgroundTasks, concurrency: int = 2, limit: int = 16, gap_analysis: bool = True, competitor_analysis: bool = True) -> ApiResponse:
     try:
         # The pipeline is run in background to immediately return response to user
         # while processing continues. This prevents request timeouts on long running tasks.
-        background_tasks.add_task(run_pipeline, concurrency, limit)
+        background_tasks.add_task(run_pipeline, concurrency, limit, gap_analysis, competitor_analysis)
 
         return ApiResponse(
             success=True,
@@ -43,11 +43,11 @@ async def get_articles(background_tasks: BackgroundTasks, concurrency: int = 2, 
         print("Exception Occurred: ", e)
         raise ApiError(status_code=500, payload="Internal Server Error", details=str(e))
 
-async def run_pipeline(concurrency: int = 2, limit: int = 16) -> None:
+async def run_pipeline(concurrency: int = 2, limit: int = 16, gap_analysis: bool = True, competitor_analysis: bool = True) -> None:
     """
     Runs the complete pipeline for scraping, analyzing, and updating Google Sheets.
     """
-    
+
     # 1. ------------------Scraping-----------------------
     scraped_data = await run_scraper(concurrency=concurrency, limit=limit)
 
@@ -72,33 +72,36 @@ async def run_pipeline(concurrency: int = 2, limit: int = 16) -> None:
     # 3. ---------------------------Gap Analysis---------------------------------
 
     # Normalize analyzed article data and the finalized article catalogue into LLM-ready
-    # input for Gap Analysis.
+    # input for Gap Analysis. This input is also utilized for competitor analysis.
     gap_analysis_input = normalize_articles_to_gap_analysis_input(
         analyzed_articles=article_analysis_result, articles=articles_catalogue
     )
-    gap_analysis_result = await run_gap_analysis(gap_analysis_input)
 
-    # Flatten gap analysis results into dict and update spreadsheet.
-    flattened_gaps = flatten_gap_analysis_result(gap_analysis_result)
-    await run_in_threadpool(update_google_sheets, flattened_gaps, "Gap Analysis")
+    if gap_analysis:
+        gap_analysis_result = await run_gap_analysis(gap_analysis_input)
+
+        # Flatten gap analysis results into dict and update spreadsheet.
+        flattened_gaps = flatten_gap_analysis_result(gap_analysis_result)
+        await run_in_threadpool(update_google_sheets, flattened_gaps, "Gap Analysis")
 
     # 4. ----------------------------Competitor Analysis-----------------------------
 
-    # Perform competitor analysis. It requires the same context as gap analysis.
-    competitor_analysis_result = await run_competitor_analysis(gap_analysis_input)
+    if competitor_analysis:
+        # Perform competitor analysis. It requires the same context as gap analysis.
+        competitor_analysis_result = await run_competitor_analysis(gap_analysis_input)
 
-    # We represent competitor analysis in 2 tables:
-    # a. Competitor Comparison
-    # b. Insights for zipBoard based on competitor analysis
-    # Hence, we extract and flatten both data into separate vars and update sheets.
-    flattened_competitor_comparison = flatten_competitor_comparison(
-        competitor_analysis_result
-    )
-    flattened_competitor_analysis_insights = flatten_competitor_analysis_insights(
-        competitor_analysis_result
-    )
-    await run_in_threadpool(
-        update_competitor_analysis_sheet,
-        flattened_competitor_comparison,
-        flattened_competitor_analysis_insights,
-    )
+        # We represent competitor analysis in 2 tables:
+        # a. Competitor Comparison
+        # b. Insights for zipBoard based on competitor analysis
+        # Hence, we extract and flatten both data into separate vars and update sheets.
+        flattened_competitor_comparison = flatten_competitor_comparison(
+            competitor_analysis_result
+        )
+        flattened_competitor_analysis_insights = flatten_competitor_analysis_insights(
+            competitor_analysis_result
+        )
+        await run_in_threadpool(
+            update_competitor_analysis_sheet,
+            flattened_competitor_comparison,
+            flattened_competitor_analysis_insights,
+        )
