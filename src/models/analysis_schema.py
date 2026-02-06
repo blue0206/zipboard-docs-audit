@@ -22,7 +22,7 @@ class ArticleAnalysisOutput(BaseModel):
     primary_topic: str
     topics_covered: List[str]
     content_type: Literal[
-        "how_to", "conceptual", "faq", "troubleshooting", "mixed", "reference"
+        "how-to", "conceptual", "faq", "troubleshooting", "mixed", "reference"
     ]
     target_audience: Literal["beginner", "intermediate", "advanced", "mixed"]
     identified_gaps: List[str]
@@ -51,7 +51,7 @@ class ArticlesCatalogue(BaseModel):
     has_videos: bool
     has_tables: bool
     content_type: Literal[
-        "how_to", "conceptual", "faq", "troubleshooting", "mixed", "reference"
+        "how-to", "conceptual", "faq", "troubleshooting", "mixed", "reference"
     ]
     target_audience: Literal["beginner", "intermediate", "advanced", "mixed"]
     quality_score: int = Field(ge=1, le=5)
@@ -68,7 +68,7 @@ class GapAnalysisInput(BaseModel):
     url: str
     primary_topic: str
     content_type: Literal[
-        "how_to", "conceptual", "faq", "troubleshooting", "mixed", "reference"
+        "how-to", "conceptual", "faq", "troubleshooting", "mixed", "reference"
     ]
     target_audience: Literal["beginner", "intermediate", "advanced", "mixed"]
     quality_score: int = Field(ge=1, le=5)
@@ -108,7 +108,7 @@ class CompetitorComparison(BaseModel):
     docs_weaknesses: List[str]
     onboarding_coverage: Literal["poor", "fair", "good", "excellent"]
     advanced_feature_coverage: Literal["none", "limited", "moderate", "extensive"]
-    docs_structure: Literal["ad_hoc", "moderately_structured", "well_structured"]
+    docs_structure: Literal["ad-hoc", "moderately-structured", "well-structured"]
     notable_docs_patterns: List[str]
     confidence_score: float = Field(
         ge=0.0,
