@@ -1,5 +1,5 @@
 from typing import Dict, List
-from ..models.analysis_schema import ArticlesCatalogue
+from ..models.analysis_schema import ArticlesCatalogue, GapAnalysisResult
 
 
 def flatten_articles_catalogue(articles: List[ArticlesCatalogue]) -> List[Dict]:
@@ -30,3 +30,28 @@ def flatten_articles_catalogue(articles: List[ArticlesCatalogue]) -> List[Dict]:
         })
 
     return flattended_data
+
+def flatten_gap_analysis_result(analysis_data: List[GapAnalysisResult]) -> List[Dict]:
+    """
+    This function flattens GapAnalysisResult data into a list of dictionaries.
+    """
+
+    flattened_data: List[Dict] = []
+
+    for gap in analysis_data:
+        flattened_data.append({
+            "Gap ID": gap.gap_id,
+            "Gap Title": gap.analysis.gap_title,
+            "Gap Description": gap.analysis.gap_description,
+            "Category": gap.analysis.category,
+            "Collection": gap.analysis.collection,
+            "Priority": gap.analysis.priority,
+            "Affected Audience": gap.analysis.affected_audience,
+            "Evidence": ", ".join(gap.analysis.evidence),
+            "Recommendation": gap.analysis.recommendation,
+            "Related Topics": ", ".join(gap.analysis.related_topics),
+            "Rationale": gap.analysis.rationale,
+            "Suggested Article Title": gap.analysis.suggested_article_title
+        })
+    
+    return flattened_data
