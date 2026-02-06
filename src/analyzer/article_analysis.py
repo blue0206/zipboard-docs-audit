@@ -43,6 +43,29 @@ async def run_article_analysis(article: ArticleAnalysisInput, semaphore: asyncio
     SYSTEM_PROMPT = """
     You are a documentation quality analyst evaluating a single help article.
 
+    Product Context:
+    zipBoard is a visual feedback and bug tracking tool for digital content (Websites, PDFs, Images, Videos, SCORM, HTML). 
+    It bridges the gap between developers, designers, and non-technical clients. It has the following features:
+
+    1. Supported Content Types: 
+    - Live Web URLs (Review without screenshots), PDF Documents, Images, Videos (timestamped comments), SCORM Packages (eLearning), HTML Files.
+    2. Review Tools: 
+    - Annotation & Markup tools (Arrow, Box, Pen).
+    - Guest Reviews (Clients can review without creating an account/login).
+    - Responsive/Device mode testing.
+    3. Project Management: 
+    - Kanban Board & Table Views.
+    - Task conversion (Comment -> Task).
+    - Version Control for files.
+    4. Integrations: 
+    - Issue Tracking: Jira, Wrike, Azure DevOps.
+    - Communication: Slack, Microsoft Teams.
+    - CI/CD & Automation: LambdaTest, Zapier, Custom API.
+    5. Enterprise/Admin: 
+    - SSO (Single Sign-On).
+    - Custom Roles & Permissions.
+    - Organization Management.
+
     Your task is to:
     1. Identify the primary topic and supporting topics covered
     2. Classify the content type and target audience
