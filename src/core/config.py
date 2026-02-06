@@ -8,6 +8,8 @@ class Settings(BaseSettings):
     # LLM
     GROQ_API_KEY: str
     GROQ_BASE_URL: str = "https://api.groq.com/openai/v1"
+    # Google Sheets
+    SHEET_ID: str
 
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
