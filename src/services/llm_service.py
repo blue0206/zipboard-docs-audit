@@ -169,6 +169,11 @@ class LLMService:
                 if e.status_code == 429:
                     # Prase retry-after header in response and wait.
                     print(f"Rate limit encountered: {str(e)}")
+
+                    # Check if rate limit is TPD or above and exit early.
+                    if e.message.find("TPM") == -1 and e.message.find("RPM") == -1:
+                        return None
+
                     wait_time = self._parse_retry_after(e.response.headers)
                     wait_time += 1.0
 
@@ -231,6 +236,11 @@ class LLMService:
                 if e.status_code == 429:
                     # Prase retry-after header in response and wait.
                     print(f"Rate limit encountered: {str(e)}")
+
+                    # Check if rate limit is TPD or above and exit early.
+                    if e.message.find("TPM") == -1 and e.message.find("RPM") == -1:
+                        return ""
+
                     wait_time = self._parse_retry_after(e.response.headers)
                     wait_time += 1.0
 
