@@ -31,7 +31,7 @@ class ArticleAnalysisOutput(BaseModel):
 
 # The Article Analysis output returned by LLM is provided an article_id
 # to help uniquely identify the article analysis data and map it to
-# the respective article. 
+# the respective article.
 # (The article_id is not generated, instead the actual article_id is simply reused.)
 class ArticleAnalysisResult(BaseModel):
     article_id: str
@@ -100,5 +100,40 @@ class GapAnalysisResult(BaseModel):
     analysis: GapAnalysisOutput
 
 
+# Details about the competitor documentation.
+class CompetitorComparison(BaseModel):
+    competitor_name: str
+    docs_url: str
+    docs_strengths: List[str]
+    docs_weaknesses: List[str]
+    onboarding_coverage: Literal["poor", "fair", "good", "excellent"]
+    advanced_feature_coverage: Literal["none", "limited", "moderate", "extensive"]
+    docs_structure: Literal["ad_hoc", "moderately_structured", "well_structured"]
+    notable_docs_patterns: List[str]
+    confidence_score: float = Field(
+        ge=0.0,
+        le=1.0,
+    )
+
+
+# Insights for zipBoard based on competitor docs analysis.
+class CompetitorInsight(BaseModel):
+    insight_type: Literal[
+        "zipboard_gap", "zipboard_advantage", "industry_expectation", "docs_opportunity"
+    ]
+    insight_summary: str
+    detailed_observation: str
+    evidence: str
+    impact_level: Literal["low", "medium", "high"]
+    recommended_action: str
+    confidence_score: float = Field(
+        ge=0.0,
+        le=1.0,
+    )
+
+
+# The Competitor Analysis output returned by LLM is parsed by this model.
 class CompetitorAnalysisOutput(BaseModel):
-    pass
+    competitors_analyzed: List[str]
+    competitor_comparisons: List[CompetitorComparison]
+    competitor_insights: List[CompetitorInsight]
