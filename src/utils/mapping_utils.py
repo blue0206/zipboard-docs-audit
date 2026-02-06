@@ -4,6 +4,7 @@ from ..models.analysis_schema import (
     ArticleAnalysisOutput,
     ArticleAnalysisResult,
     ArticlesCatalogue,
+    GapAnalysisInput,
 )
 from ..models.scraping_schema import Article, Collection
 
@@ -121,7 +122,7 @@ def normalize_analyzed_articles_to_catalogue(
     from LLM to create a catalogue of articles with insights for spreadsheet display.
 
     Args:
-        - analyzed_article: The list of analyzed articles returned by LLM after analysis.
+        - analyzed_articles: The list of analyzed articles returned by LLM after analysis.
         - articles: The original list of LLM-ready articles used for analysis.
 
     Returns:
@@ -161,3 +162,48 @@ def normalize_analyzed_articles_to_catalogue(
         )
 
     return catalogue
+
+def normalize_articles_to_gap_analysis_input(analyzed_articles: List[ArticleAnalysisResult], articles: List[ArticlesCatalogue]) -> List[GapAnalysisInput]:
+    """
+    This function combines the article catalogue metadata with the analysis output
+    from LLM to create structure for LLM ingestion for Gap Analysis.
+
+    Args:
+        - analyzed_articles: The list of analyzed articles returned by LLM after article analysis.
+        - articles: The list of article catalogue.
+
+    Returns:
+        A list of articles with combined metadata, analysis and gaps for LLM ingestion.
+    """
+
+    # This is required because the primary_topic field is not present in
+    # article catalogue as it is redundant for spreadsheet display but
+    # useful for LLM ingestion as it serves as important metadata about
+    # what the article is mostly about.
+    analysis_map: Dict[str, ArticleAnalysisOutput] = {
+        result.article_id: result.analysis for result in analyzed_articles
+    }
+
+    gap_analysis_input: List[GapAnalysisInput] = []
+
+    for article in articles:
+        analysis = analysis_map.get(article.article_id)
+
+        if not analysis:
+            continue
+
+        gap_analysis_input.append(GapAnalysisInput(
+            article_id=article.article_id,
+            article_title=article.article_title,
+            category=article.category,
+            collection=article.collection,
+            content_type=article.content_type,
+            identified_gaps=article.identified_gaps,
+            primary_topic=analysis.primary_topic,
+            quality_score=article.quality_score,
+            target_audience=article.target_audience,
+            topics_covered=article.topics_covered,
+            url=article.url
+        ))
+
+    return gap_analysis_input
