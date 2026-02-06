@@ -5,20 +5,20 @@ from openai import AsyncOpenAI, APIStatusError
 from groq import AsyncGroq, APIStatusError as GroqAPIStatusError
 from groq.types.chat import ChatCompletionMessageParam
 from openai.types.responses import ResponseInputParam
-from models.llm_schema import GuardrailResult
 from ..core.config import env_settings
-from ..models.analysis_schema import ArticleAnalysisOutput, CompetitorAnalysisOutput, GapAnalysisOutput
+from ..models.analysis_schema import ArticleAnalysisOutput, CompetitorAnalysisOutput, GapAnalysisOutputList
+from ..models.llm_schema import GuardrailResult
 
 # There are a total of ~387 zipBoard articles. If we scrape and process all
 # of them, even one-by-one, we will definitely hit rate limits as we're on
 # free tier. Therefore, we use multiple models and rotate between them
-# for article analysis. (modulo arithmetic ftw!)
+# for article analysis.
 ARTICLE_ANALYSIS_MODELS = [
-    "llama-3.3-70b-versatile", 
     "moonshotai/kimi-k2-instruct", 
     "moonshotai/kimi-k2-instruct-0905",
-    "llama-3.1-8b-instant",
     "openai/gpt-oss-20b",
+    "meta-llama/llama-4-maverick-17b-128e-instruct",
+    "meta-llama/llama-4-scout-17b-16e-instruct"
 ]
 # Gap analysis is done once for entire scraped batch, hence a single model will do.
 GAP_ANALYSIS_MODEL = "openai/gpt-oss-120b"
@@ -30,7 +30,10 @@ COMPETITOR_ANALYSIS_RESEARCH_MODEL = "groq/compound"
 COMPETITOR_ANALYSIS_REFINER_MODEL = "openai/gpt-oss-120b"
 # Serves as output guardrail for all LLM response. Might hit rate limits,
 # but priority is low so acceptable.
-SAFEGUARD_MODEL = "openai/gpt-oss-safeguard-20b" 
+SAFEGUARD_MODELS = [
+    "openai/gpt-oss-safeguard-20b",
+    "openai/gpt-oss-20b"
+]
 
 
 class LLMService:
@@ -98,6 +101,7 @@ class LLMService:
             - system_prompt: The system prompt to set context for LLM.
             - input: The input messages for LLM.
             - mode: The mode of analysis which determines model choice and temperature.
+            - fallback: Only pass this for guardrail request. (Default = False)
         
         Returns:
             Parsed LLM response as per expected schema or None in case of failure.
@@ -120,7 +124,7 @@ class LLMService:
                 response_format = CompetitorAnalysisOutput
             
             else:
-                model = SAFEGUARD_MODEL
+                model = SAFEGUARD_MODELS[1] if fallback else SAFEGUARD_MODELS[0]
                 response_format = GuardrailResult
 
             try:
@@ -185,10 +189,7 @@ class LLMService:
                         "tools": {
                             "enabled_tools": ["browser_automation", "web_search", "visit_website"]
                         }
-                    },
-                    parallel_tool_calls=True,
-                    max_tokens=65000,
-                    tool_choice="required"
+                    }
                 )
 
                 content = response.choices[0].message.content  
