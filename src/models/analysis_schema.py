@@ -56,3 +56,20 @@ class GapAnalysisInput(BaseModel):
     identified_gaps: List[str]
     topics_covered: List[str]
 
+
+class GapAnalysisOutput(BaseModel):
+    gap_title: str
+    gap_description: str
+    category: str
+    collection: str
+    priority: Literal["low", "medium", "high"]
+    affected_audience: Literal["beginner", "intermediate", "advanced", "mixed"]
+    related_topics: List[str]
+    evidence: List[str]
+    recommendation: str
+    rationale: str
+    suggested_article_title: str
+
+class GapAnalysisResult(BaseModel):
+    gap_id: str
+    analysis: GapAnalysisOutput
