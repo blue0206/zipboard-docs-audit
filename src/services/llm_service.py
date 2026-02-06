@@ -1,7 +1,9 @@
 import asyncio
-from typing import Literal
+from typing import List, Literal
 from httpx import Headers
 from openai import AsyncOpenAI, APIStatusError
+from groq import AsyncGroq, APIStatusError as GroqAPIStatusError
+from groq.types.chat import ChatCompletionMessageParam
 from openai.types.responses import ResponseInputParam
 from models.llm_schema import GuardrailResult
 from ..core.config import env_settings
@@ -22,9 +24,10 @@ ARTICLE_ANALYSIS_MODELS = [
 GAP_ANALYSIS_MODEL = "openai/gpt-oss-120b"
 # Groq Compound model can perform browser automation, web search, and visit URLs, hence
 # this can be helpful for competitor analysis.
-COMPETITOR_ANALYSIS_MODEL = "groq/compound"
-# Just to be defensive, we judge the output of competitor analysis by a good model.
-JUDGE_MODEL = "openai/gpt-oss-120b"
+COMPETITOR_ANALYSIS_RESEARCH_MODEL = "groq/compound"
+# Groq Compound model returns unstructured output. This model refines it and
+# returns a structured output.
+COMPETITOR_ANALYSIS_REFINER_MODEL = "openai/gpt-oss-120b"
 # Serves as output guardrail for all LLM response. Might hit rate limits,
 # but priority is low so acceptable.
 SAFEGUARD_MODEL = "openai/gpt-oss-safeguard-20b" 
@@ -35,6 +38,9 @@ class LLMService:
         self.client = AsyncOpenAI(
             api_key=env_settings.GROQ_API_KEY,
             base_url=env_settings.GROQ_BASE_URL
+        )
+        self.groq_client = AsyncGroq(
+            api_key=env_settings.GROQ_API_KEY,
         )
         self.model_idx = 0
 
@@ -47,7 +53,7 @@ class LLMService:
         self.model_idx = (self.model_idx + 1) % len(ARTICLE_ANALYSIS_MODELS)
         return model
     
-    def _get_temperature(self, mode: Literal["article_analysis", "gap_analysis", "judge_gap_analysis", "output_guardrail", "competitor_analysis"]) -> float:
+    def _get_temperature(self, mode: Literal["article_analysis", "gap_analysis", "refine_competitor_analysis", "output_guardrail", "competitor_analysis"]) -> float:
         """
         Returns temperature based on mode. Higher temperature for gap analysis and competitor analysis to encourage moderate creativity, while lower for article analysis and judging to enforce accuracy.
         """
@@ -55,10 +61,10 @@ class LLMService:
         if mode == "article_analysis":
             return 0.25
         elif mode == "gap_analysis":
-            return 0.45
+            return 0.35
         elif mode == "competitor_analysis":
             return 0.65
-        elif mode == "judge_gap_analysis":
+        elif mode == "refine_competitor_analysis":
             return 0.15
         else:
             return 0.1
@@ -82,14 +88,14 @@ class LLMService:
         self, 
         system_prompt: str, 
         input: ResponseInputParam,
-        mode: Literal["article_analysis", "gap_analysis", "judge_gap_analysis", "output_guardrail", "competitor_analysis"]
-    ) -> ArticleAnalysisOutput | GapAnalysisOutput | CompetitorAnalysisOutput | GuardrailResult | None:
+        mode: Literal["article_analysis", "gap_analysis", "refine_competitor_analysis", "output_guardrail"]
+    ) -> ArticleAnalysisOutput | List[GapAnalysisOutput] | CompetitorAnalysisOutput | GuardrailResult | None:
         """
         Fetches LLM response based on mode with retry and rate limit handling.
 
         Args:
             - system_prompt: The system prompt to set context for LLM.
-            - user_prompt: The user prompt containing the actual input.
+            - input: The input messages for LLM.
             - mode: The mode of analysis which determines model choice and temperature.
         
         Returns:
@@ -99,19 +105,19 @@ class LLMService:
         retries = 5
         
         for attempt in range(retries):
-            # Set model based on mode
+            # Set model and response_format based on mode
             if mode == "gap_analysis":
                 model = GAP_ANALYSIS_MODEL
-                response_format = GapAnalysisOutput
+                response_format = List[GapAnalysisOutput]
+            
             elif mode == "article_analysis":
                 model = self._get_next_article_analysis_model()
                 response_format = ArticleAnalysisOutput
-            elif mode == "competitor_analysis":
-                model = COMPETITOR_ANALYSIS_MODEL
+            
+            elif mode == "refine_competitor_analysis":
+                model = COMPETITOR_ANALYSIS_REFINER_MODEL
                 response_format = CompetitorAnalysisOutput
-            elif mode == "judge_gap_analysis":
-                model = JUDGE_MODEL
-                response_format = GuardrailResult
+            
             else:
                 model = SAFEGUARD_MODEL
                 response_format = GuardrailResult
@@ -152,5 +158,62 @@ class LLMService:
                 print(f"Exception occurred: {e}")
                 
         return None
+    
+    async def get_llm_response_with_research(self, input: List[ChatCompletionMessageParam]) -> str:
+        """
+        Fetches LLM response with retry and rate limit handling. Force tool calls, for research.
+
+        Args:
+            - input: The input messages for LLM.
+            - mode: The mode of analysis which determines model choice and temperature.
+        
+        Returns:
+            Returns unstructured, text output.
+        """
+        retries = 5
+
+        for attempt in range(retries):
+            try:
+                print(f"🤖 Req: {COMPETITOR_ANALYSIS_RESEARCH_MODEL} | Attempt {attempt+1}")
+
+                response = await self.groq_client.chat.completions.create(
+                    model=COMPETITOR_ANALYSIS_RESEARCH_MODEL,
+                    messages=input,
+                    temperature=self._get_temperature("competitor_analysis"),
+                    compound_custom={
+                        "tools": {
+                            "enabled_tools": ["browser_automation", "web_search", "visit_website"]
+                        }
+                    },
+                    parallel_tool_calls=True,
+                    max_tokens=65000,
+                    tool_choice="required"
+                )
+
+                content = response.choices[0].message.content  
+                if not content:
+                    raise ValueError("Empty response")
+                
+                return content
+
+            except GroqAPIStatusError as e:
+                # Handle Rate Limits (429)
+                if e.status_code == 429:
+                    # Prase retry-after header in response and wait.
+                    print(f"Rate limit encountered: {str(e)}")
+                    wait_time = self._parse_retry_after(e.response.headers)
+                    wait_time += 1.0
+
+                    print(f"Rate Limit ({COMPETITOR_ANALYSIS_RESEARCH_MODEL}). Sleeping {wait_time:.2f}s...")
+                    await asyncio.sleep(wait_time)
+                    continue
+                
+                # Log other API errors and continue.
+                print(f"API Error ({COMPETITOR_ANALYSIS_RESEARCH_MODEL}): {e}")
+                    
+            except Exception as e:
+                print(f"Exception occurred: {e}")
+                
+        return ""
 
 llm_service = LLMService()
