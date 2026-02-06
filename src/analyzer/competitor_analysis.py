@@ -113,6 +113,7 @@ async def run_competitor_analysis(articles: List[GapAnalysisInput]) -> Competito
 
     zipBoard Documentation Context:
     Below is a structured list of documentation articles with metadata and per-article analysis.
+    zipBoard docs: https://help.zipboard.co
 
     Each item contains:
     - Article metadata (category, collection, target audience, content type)
@@ -235,14 +236,13 @@ async def refine_competitor_analysis_research(response_text: str) -> CompetitorA
         {[f"- {issue}\n" for issue in guardrail_results.issues]}
 
         Revise the analysis to fix ONLY these issues.
-        Do not introduce new gaps or topics.
         """
         input.append({"role": "user", "content": RETRY_PROMPT})
         retried_response = await llm_service.get_llm_response(system_prompt=SYSTEM_PROMPT, input=input, mode="refine_competitor_analysis")
         assert isinstance(retried_response, CompetitorAnalysisOutput)
 
         # Run guardrails again, if failed, log and conitnue.
-        final_guardrail_results = await run_competitor_analysis_guardrail(retried_response)
+        final_guardrail_results = await run_competitor_analysis_guardrail(retried_response, fallback=True)
         if final_guardrail_results and not final_guardrail_results.is_valid:
             print(f"Final guardrail failed for Competitor Analysis after retry. Issues: {final_guardrail_results.issues}")
 
@@ -251,12 +251,13 @@ async def refine_competitor_analysis_research(response_text: str) -> CompetitorA
         return response
 
 
-async def run_competitor_analysis_guardrail(analysis: CompetitorAnalysisOutput) -> GuardrailResult | None:
+async def run_competitor_analysis_guardrail(analysis: CompetitorAnalysisOutput, fallback: bool = False) -> GuardrailResult | None:
     """
     This function runs guardrail checks on the competitor analysis.
 
     Args:
         - analysis: The generated competitor analysis which needs to be validated.
+        - fallback: Whether to use the fallback model for guardrail (default = False).
     
     Returns:
         The guardrail result containing validity status and identified issues, or None.
@@ -307,7 +308,7 @@ async def run_competitor_analysis_guardrail(analysis: CompetitorAnalysisOutput) 
     """
 
     input: ResponseInputParam = [{"role": "user", "content": USER_PROMPT}]
-    response = await llm_service.get_llm_response(system_prompt=SYSTEM_PROMPT, input=input, mode="output_guardrail")
+    response = await llm_service.get_llm_response(system_prompt=SYSTEM_PROMPT, input=input, mode="output_guardrail", fallback=fallback)
     if isinstance(response, GuardrailResult):
         return response
     return None

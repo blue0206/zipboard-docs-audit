@@ -151,7 +151,7 @@ async def run_gap_analysis(articles: List[GapAnalysisInput]) -> List[GapAnalysis
         assert isinstance(retried_response, GapAnalysisOutputList)
 
         # Run guardrails again, if failed, log and conitnue.
-        final_guardrail_results = await run_gap_analysis_guardrail(articles=articles, analysis=retried_response.analysis)
+        final_guardrail_results = await run_gap_analysis_guardrail(articles=articles, analysis=retried_response.analysis, fallback=True)
         if final_guardrail_results and not final_guardrail_results.is_valid:
             print(f"Final guardrail failed for Gap Analysis after retry. Issues: {final_guardrail_results.issues}")
 
@@ -161,7 +161,7 @@ async def run_gap_analysis(articles: List[GapAnalysisInput]) -> List[GapAnalysis
         final_result = generate_gap_ids(response.analysis)
         return final_result
     
-async def run_gap_analysis_guardrail(articles: List[GapAnalysisInput], analysis: List[GapAnalysisOutput]) -> GuardrailResult | None:
+async def run_gap_analysis_guardrail(articles: List[GapAnalysisInput], analysis: List[GapAnalysisOutput], fallback: bool = False) -> GuardrailResult | None:
     """
     This function runs guardrail checks on the gap analysis to ensure
     integrity and validity of the analysis.
@@ -169,6 +169,7 @@ async def run_gap_analysis_guardrail(articles: List[GapAnalysisInput], analysis:
     Args:
         - articles: The original list of articles input which forms the context for guardrail checks.
         - analysis: The generated gap analysis which needs to be validated.
+        - fallback: Whether to use the fallback model for guardrail (default = False).
     
     Returns:
         The guardrail result containing validity status and identified issues, or None.
@@ -216,7 +217,7 @@ async def run_gap_analysis_guardrail(articles: List[GapAnalysisInput], analysis:
     """
 
     input: ResponseInputParam = [{"role": "user", "content": USER_PROMPT}]
-    response = await llm_service.get_llm_response(system_prompt=SYSTEM_PROMPT, input=input, mode="output_guardrail")
+    response = await llm_service.get_llm_response(system_prompt=SYSTEM_PROMPT, input=input, mode="output_guardrail", fallback=fallback)
     if isinstance(response, GuardrailResult):
         return response
     return None

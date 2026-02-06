@@ -1,9 +1,9 @@
 import asyncio
 from typing import List
-from models.llm_schema import GuardrailResult
 from openai.types.responses import ResponseInputParam
 from ..services.llm_service import llm_service
 from ..models.analysis_schema import ArticleAnalysisInput, ArticleAnalysisOutput, ArticleAnalysisResult
+from ..models.llm_schema import GuardrailResult
 
 
 async def analyze_articles(articles: List[ArticleAnalysisInput]) -> List[ArticleAnalysisResult]:
@@ -20,7 +20,7 @@ async def analyze_articles(articles: List[ArticleAnalysisInput]) -> List[Article
     Returns:
         A list of article analysis outputs from LLM.
     """
-    semaphore = asyncio.Semaphore(4)
+    semaphore = asyncio.Semaphore(2)
 
     results = await asyncio.gather(*[run_article_analysis(a, semaphore) for a in articles])
     results = [ArticleAnalysisResult(article_id=article.article_id, analysis=result) for result, article in zip(results, articles) if result is not None]
@@ -125,14 +125,14 @@ async def run_article_analysis(article: ArticleAnalysisInput, semaphore: asyncio
             assert isinstance(retried_response, ArticleAnalysisOutput)
 
             # Run guardrails again, if failed, log and conitnue.
-            final_guardrail_results = await run_article_analysis_guardrail(article=article, analysis=retried_response)
+            final_guardrail_results = await run_article_analysis_guardrail(article=article, analysis=retried_response, fallback=True)
             if final_guardrail_results and not final_guardrail_results.is_valid:
                 print(f"Final guardrail failed for article {article.article_id} after retry. Issues: {final_guardrail_results.issues}")
             return retried_response
         else:
             return response
 
-async def run_article_analysis_guardrail(article: ArticleAnalysisInput, analysis: ArticleAnalysisOutput) -> GuardrailResult | None:
+async def run_article_analysis_guardrail(article: ArticleAnalysisInput, analysis: ArticleAnalysisOutput, fallback: bool = False) -> GuardrailResult | None:
     """
     This function runs guardrail checks on the article analysis to ensure
     integrity and validity of the analysis.
@@ -140,6 +140,7 @@ async def run_article_analysis_guardrail(article: ArticleAnalysisInput, analysis
     Args:
         - article: The original article input which forms the context for guardrail checks.
         - analysis: The generated article analysis which needs to be validated.
+        - fallback: Whether to use the fallback model for guardrail (default = False).
     
     Returns:
         The guardrail result containing validity status and identified issues, or None.
@@ -177,7 +178,7 @@ async def run_article_analysis_guardrail(article: ArticleAnalysisInput, analysis
     """
 
     input: ResponseInputParam = [{"role": "user", "content": USER_PROMPT}]
-    response = await llm_service.get_llm_response(system_prompt=SYSTEM_PROMPT, input=input, mode="output_guardrail")
+    response = await llm_service.get_llm_response(system_prompt=SYSTEM_PROMPT, input=input, mode="output_guardrail", fallback=fallback)
     if isinstance(response, GuardrailResult):
         return response
     return None
