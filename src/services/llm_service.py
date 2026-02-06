@@ -88,8 +88,9 @@ class LLMService:
         self, 
         system_prompt: str, 
         input: ResponseInputParam,
-        mode: Literal["article_analysis", "gap_analysis", "refine_competitor_analysis", "output_guardrail"]
-    ) -> ArticleAnalysisOutput | List[GapAnalysisOutput] | CompetitorAnalysisOutput | GuardrailResult | None:
+        mode: Literal["article_analysis", "gap_analysis", "refine_competitor_analysis", "output_guardrail"],
+        fallback: bool = False
+    ) -> ArticleAnalysisOutput | GapAnalysisOutputList | CompetitorAnalysisOutput | GuardrailResult | None:
         """
         Fetches LLM response based on mode with retry and rate limit handling.
 
@@ -108,7 +109,7 @@ class LLMService:
             # Set model and response_format based on mode
             if mode == "gap_analysis":
                 model = GAP_ANALYSIS_MODEL
-                response_format = List[GapAnalysisOutput]
+                response_format = GapAnalysisOutputList
             
             elif mode == "article_analysis":
                 model = self._get_next_article_analysis_model()

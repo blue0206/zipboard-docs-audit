@@ -1,7 +1,6 @@
-import json
 from typing import List
 from openai.types.responses import ResponseInputParam
-from ..models.analysis_schema import GapAnalysisInput, GapAnalysisOutput, GapAnalysisResult
+from ..models.analysis_schema import GapAnalysisInput, GapAnalysisOutput, GapAnalysisOutputList, GapAnalysisResult
 from ..models.llm_schema import GuardrailResult
 from ..services.llm_service import llm_service
 
@@ -129,18 +128,15 @@ async def run_gap_analysis(articles: List[GapAnalysisInput]) -> List[GapAnalysis
     # Generate LLM response and get insights.
     input: ResponseInputParam = [{"role": "user", "content": USER_PROMPT}]
     response = await llm_service.get_llm_response(system_prompt=SYSTEM_PROMPT, input=input, mode="gap_analysis")
-    assert isinstance(response, list)
+    assert isinstance(response, GapAnalysisOutputList)
 
     # We run the LLM response against a guardrail LLM to verify integrity and validate the response.
     # In case the guardrail returns issues, we retry ONCE, and run the guardrail again. In case
     # we encounter issue again, we simply log and return the response.
-    guardrail_results = await run_gap_analysis_guardrail(articles=articles, analysis=response)
+    guardrail_results = await run_gap_analysis_guardrail(articles=articles, analysis=response.analysis)
     if guardrail_results and not guardrail_results.is_valid:
         # Pass initial model response as string to preserve conversational context.
-        # Since pydantic objects are not JSON-dumpable, we use .model_dump_json() if the
-        # list item is pydantic model, else use json.dumps().
-        response_content = f"{[(item.model_dump_json() if isinstance(item, GapAnalysisOutput) else json.dumps(item)) for item in response]}"
-        input.append({"role": "assistant", "content": response_content})
+        input.append({"role": "assistant", "content": response.model_dump_json()})
 
         # Pass the retry prompt and invoke LLM.
         RETRY_PROMPT = f"""
@@ -152,17 +148,17 @@ async def run_gap_analysis(articles: List[GapAnalysisInput]) -> List[GapAnalysis
         """
         input.append({"role": "user", "content": RETRY_PROMPT})
         retried_response = await llm_service.get_llm_response(system_prompt=SYSTEM_PROMPT, input=input, mode="gap_analysis")
-        assert isinstance(retried_response, list)
+        assert isinstance(retried_response, GapAnalysisOutputList)
 
         # Run guardrails again, if failed, log and conitnue.
-        final_guardrail_results = await run_gap_analysis_guardrail(articles=articles, analysis=retried_response)
+        final_guardrail_results = await run_gap_analysis_guardrail(articles=articles, analysis=retried_response.analysis)
         if final_guardrail_results and not final_guardrail_results.is_valid:
             print(f"Final guardrail failed for Gap Analysis after retry. Issues: {final_guardrail_results.issues}")
 
-        final_result = generate_gap_ids(retried_response)
+        final_result = generate_gap_ids(retried_response.analysis)
         return final_result
     else:
-        final_result = generate_gap_ids(response)
+        final_result = generate_gap_ids(response.analysis)
         return final_result
     
 async def run_gap_analysis_guardrail(articles: List[GapAnalysisInput], analysis: List[GapAnalysisOutput]) -> GuardrailResult | None:
