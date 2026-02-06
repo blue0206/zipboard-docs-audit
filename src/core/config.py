@@ -10,6 +10,8 @@ class Settings(BaseSettings):
     GROQ_BASE_URL: str = "https://api.groq.com/openai/v1"
     # Google Sheets
     SHEET_ID: str
+    # API
+    AUTH_TOKEN: str # auth token to access this API
 
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
