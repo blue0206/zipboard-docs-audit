@@ -1,5 +1,6 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
 from fastapi.concurrency import run_in_threadpool
+from ..core.dependency import authenticate_request
 from ..analyzer.competitor_analysis import run_competitor_analysis
 from ..analyzer.gap_analysis import run_gap_analysis
 from ..analyzer.article_analysis import analyze_articles
@@ -11,7 +12,8 @@ from ..models.api import ApiError, ApiResponse
 
 router = APIRouter(prefix="/articles", tags=["Articles"])
 
-@router.get("/", response_model=ApiResponse)
+
+@router.get("/", response_model=ApiResponse, dependencies=[Depends(authenticate_request)])
 async def get_articles(concurrency: int = 2, limit: int = 16):
     try:
         # 1. ------------------Scraping-----------------------
