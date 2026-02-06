@@ -102,13 +102,13 @@ async def scrape_article(
             global articles_counter
             if articles_counter >= limit:
                 return None
-            articles_counter += 1
 
             await asyncio.sleep(0.5)
             article_soup = await get_soup(client, url)
             if not article_soup:
                 print(f"Failed to retrieve {name} article url.")
                 return None
+            articles_counter += 1
 
             article = article_soup.select_one("article#fullArticle")
             if not article:
