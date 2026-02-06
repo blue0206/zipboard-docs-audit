@@ -1,4 +1,4 @@
-from typing import Dict, List
+from typing import Dict, List, Literal
 from ..models.analysis_schema import ArticlesCatalogue, CompetitorAnalysisOutput, GapAnalysisResult
 
 
@@ -78,3 +78,36 @@ def flatten_competitor_comparison(analysis_data: CompetitorAnalysisOutput) -> Li
         })
     
     return flattened_data
+
+def flatten_competitor_analysis_insights(analysis_data: CompetitorAnalysisOutput) -> List[Dict]:
+    """
+    This function extracts the competitor analysis insights data from analysis data
+    and flattens it into a list of dict.
+    """
+
+    flattened_data: List[Dict] = []
+
+    for data in analysis_data.competitor_insights:
+        flattened_data.append({
+            "Insight Type": format_insight_type(data.insight_type),
+            "Insight Summary": data.insight_summary,
+            "Detailed Observation": data.detailed_observation,
+            "Evidence": data.evidence,
+            "Impact Level": data.impact_level.title(),
+            "Recommended Action": data.recommended_action,
+            "Confidence Score": data.confidence_score
+        })
+    
+    return flattened_data
+
+def format_insight_type(insight_type: Literal[
+        "zipboard_gap", "zipboard_advantage", "industry_expectation", "docs_opportunity"
+    ]) -> str:
+    if insight_type == "zipboard_gap":
+        return "Gap"
+    elif insight_type == "zipboard_advantage":
+        return "Advantage"
+    elif insight_type == "industry_expectation":
+        return "Industry Expectation"
+    else:
+        return "Opportunity"
