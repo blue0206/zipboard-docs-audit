@@ -1,5 +1,5 @@
 from typing import Dict, List
-from ..models.analysis_schema import ArticlesCatalogue, GapAnalysisResult
+from ..models.analysis_schema import ArticlesCatalogue, CompetitorAnalysisOutput, GapAnalysisResult
 
 
 def flatten_articles_catalogue(articles: List[ArticlesCatalogue]) -> List[Dict]:
@@ -52,6 +52,29 @@ def flatten_gap_analysis_result(analysis_data: List[GapAnalysisResult]) -> List[
             "Related Topics": ", ".join(gap.analysis.related_topics),
             "Rationale": gap.analysis.rationale,
             "Suggested Article Title": gap.analysis.suggested_article_title
+        })
+    
+    return flattened_data
+
+def flatten_competitor_comparison(analysis_data: CompetitorAnalysisOutput) -> List[Dict]:
+    """
+    This function extracts the competitor comparison data from analysis data
+    and flattens it into a list of dict.
+    """
+
+    flattened_data: List[Dict] = []
+
+    for data in analysis_data.competitor_comparisons:
+        flattened_data.append({
+            "Competitor Name": data.competitor_name,
+            "Docs URL": data.docs_url,
+            "Docs Strengths": ", ".join(data.docs_strengths),
+            "Docs Weaknesses": ", ".join(data.docs_weaknesses),
+            "Onboarding Coverage": data.onboarding_coverage.title(),
+            "Advanced Feature Coverage": data.advanced_feature_coverage.title(),
+            "Docs Structure": data.docs_structure.title(),
+            "Notable Documentation Patterns": ", ".join(data.notable_docs_patterns),
+            "Confidence Score": data.confidence_score
         })
     
     return flattened_data
