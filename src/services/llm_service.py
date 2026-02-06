@@ -25,13 +25,13 @@ ARTICLE_ANALYSIS_MODELS = [
     "meta-llama/llama-4-scout-17b-16e-instruct",
 ]
 # Gap analysis is done once for entire scraped batch, hence a single model will do.
-GAP_ANALYSIS_MODEL = "openai/gpt-oss-120b"
+GAP_ANALYSIS_MODEL = "groq/compound-mini"
 # Groq Compound model can perform browser automation, web search, and visit URLs, hence
 # this can be helpful for competitor analysis.
 COMPETITOR_ANALYSIS_RESEARCH_MODEL = "groq/compound"
 # Groq Compound model returns unstructured output. This model refines it and
 # returns a structured output.
-COMPETITOR_ANALYSIS_REFINER_MODEL = "openai/gpt-oss-120b"
+REFINER_MODEL = "openai/gpt-oss-120b"
 # Serves as output guardrail for all LLM response. Might hit rate limits,
 # but priority is low so acceptable.
 SAFEGUARD_MODELS = ["openai/gpt-oss-safeguard-20b", "openai/gpt-oss-20b"]
@@ -64,6 +64,7 @@ class LLMService:
             "refine_competitor_analysis",
             "output_guardrail",
             "competitor_analysis",
+            "refine_gap_analysis"
         ],
     ) -> float:
         """
@@ -77,6 +78,8 @@ class LLMService:
         elif mode == "competitor_analysis":
             return 0.65
         elif mode == "refine_competitor_analysis":
+            return 0.15
+        elif mode == "refine_gap_analysis":
             return 0.15
         else:
             return 0.1
@@ -102,7 +105,7 @@ class LLMService:
         input: ResponseInputParam,
         mode: Literal[
             "article_analysis",
-            "gap_analysis",
+            "refine_gap_analysis",
             "refine_competitor_analysis",
             "output_guardrail",
         ],
@@ -131,8 +134,8 @@ class LLMService:
 
         for attempt in range(retries):
             # Set model and response_format based on mode
-            if mode == "gap_analysis":
-                model = GAP_ANALYSIS_MODEL
+            if mode == "refine_gap_analysis":
+                model = REFINER_MODEL
                 response_format = GapAnalysisOutputList
 
             elif mode == "article_analysis":
@@ -140,7 +143,7 @@ class LLMService:
                 response_format = ArticleAnalysisOutput
 
             elif mode == "refine_competitor_analysis":
-                model = COMPETITOR_ANALYSIS_REFINER_MODEL
+                model = REFINER_MODEL
                 response_format = CompetitorAnalysisOutput
 
             else:
@@ -189,8 +192,8 @@ class LLMService:
 
         return None
 
-    async def get_llm_response_with_research(
-        self, input: List[ChatCompletionMessageParam]
+    async def get_llm_response_with_groq(
+        self, input: List[ChatCompletionMessageParam], mode: Literal["competitor_analysis", "gap_analysis"]
     ) -> str:
         """
         Fetches LLM response with retry and rate limit handling. Force tool calls, for research.
@@ -204,25 +207,33 @@ class LLMService:
         """
         retries = 5
 
+        # compound custom tool choice. None for gap analysis.
+        compound_custom = None
+        if mode == "competitor_analysis":
+            compound_custom = {
+                "tools": {
+                    "enabled_tools": [
+                        "browser_automation",
+                        "web_search",
+                        "visit_website",
+                    ]
+                }
+            }
+
+        model = COMPETITOR_ANALYSIS_RESEARCH_MODEL if mode == "competitor_analysis" else GAP_ANALYSIS_MODEL
+
         for attempt in range(retries):
             try:
                 print(
-                    f"🤖 Req: {COMPETITOR_ANALYSIS_RESEARCH_MODEL} | Attempt {attempt + 1}"
+                    f"🤖 Req: {model} | Attempt {attempt + 1}"
                 )
 
                 response = await self.groq_client.chat.completions.create(
-                    model=COMPETITOR_ANALYSIS_RESEARCH_MODEL,
+                    model=model,
                     messages=input,
-                    temperature=self._get_temperature("competitor_analysis"),
-                    compound_custom={
-                        "tools": {
-                            "enabled_tools": [
-                                "browser_automation",
-                                "web_search",
-                                "visit_website",
-                            ]
-                        }
-                    },
+                    temperature=self._get_temperature(mode),
+                    compound_custom=compound_custom, # type: ignore
+                    tool_choice="auto" if mode == "competitor_analysis" else "none",
                 )
 
                 content = response.choices[0].message.content

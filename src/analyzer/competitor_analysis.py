@@ -138,7 +138,7 @@ async def run_competitor_analysis(
         {"role": "system", "content": SYSTEM_PROMPT},
         {"role": "user", "content": USER_PROMPT},
     ]
-    text_response = await llm_service.get_llm_response_with_research(input)
+    text_response = await llm_service.get_llm_response_with_groq(input, mode="competitor_analysis")
     # We run the response against a refiner model to return structured output.
     return await refine_competitor_analysis_research(text_response)
 
