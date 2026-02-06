@@ -32,7 +32,7 @@ async def get_soup(client: httpx.AsyncClient, url: str) -> BeautifulSoup | None:
     """
 
     try:
-        print("BASE URL FETCHING: ", url)
+        print("FETCHING URL: ", url)
 
         # Exit early for redundant URLs.
         if not url.startswith("https://help.zipboard.co"):

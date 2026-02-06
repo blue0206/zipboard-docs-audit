@@ -6,7 +6,11 @@ from groq import AsyncGroq, APIStatusError as GroqAPIStatusError
 from groq.types.chat import ChatCompletionMessageParam
 from openai.types.responses import ResponseInputParam
 from ..core.config import env_settings
-from ..models.analysis_schema import ArticleAnalysisOutput, CompetitorAnalysisOutput, GapAnalysisOutputList
+from ..models.analysis_schema import (
+    ArticleAnalysisOutput,
+    CompetitorAnalysisOutput,
+    GapAnalysisOutputList,
+)
 from ..models.llm_schema import GuardrailResult
 
 # There are a total of ~387 zipBoard articles. If we scrape and process all
@@ -14,11 +18,11 @@ from ..models.llm_schema import GuardrailResult
 # free tier. Therefore, we use multiple models and rotate between them
 # for article analysis.
 ARTICLE_ANALYSIS_MODELS = [
-    "moonshotai/kimi-k2-instruct", 
+    "moonshotai/kimi-k2-instruct",
     "moonshotai/kimi-k2-instruct-0905",
     "openai/gpt-oss-20b",
     "meta-llama/llama-4-maverick-17b-128e-instruct",
-    "meta-llama/llama-4-scout-17b-16e-instruct"
+    "meta-llama/llama-4-scout-17b-16e-instruct",
 ]
 # Gap analysis is done once for entire scraped batch, hence a single model will do.
 GAP_ANALYSIS_MODEL = "openai/gpt-oss-120b"
@@ -30,17 +34,13 @@ COMPETITOR_ANALYSIS_RESEARCH_MODEL = "groq/compound"
 COMPETITOR_ANALYSIS_REFINER_MODEL = "openai/gpt-oss-120b"
 # Serves as output guardrail for all LLM response. Might hit rate limits,
 # but priority is low so acceptable.
-SAFEGUARD_MODELS = [
-    "openai/gpt-oss-safeguard-20b",
-    "openai/gpt-oss-20b"
-]
+SAFEGUARD_MODELS = ["openai/gpt-oss-safeguard-20b", "openai/gpt-oss-20b"]
 
 
 class LLMService:
     def __init__(self):
         self.client = AsyncOpenAI(
-            api_key=env_settings.GROQ_API_KEY,
-            base_url=env_settings.GROQ_BASE_URL
+            api_key=env_settings.GROQ_API_KEY, base_url=env_settings.GROQ_BASE_URL
         )
         self.groq_client = AsyncGroq(
             api_key=env_settings.GROQ_API_KEY,
@@ -55,8 +55,17 @@ class LLMService:
         model = ARTICLE_ANALYSIS_MODELS[self.model_idx]
         self.model_idx = (self.model_idx + 1) % len(ARTICLE_ANALYSIS_MODELS)
         return model
-    
-    def _get_temperature(self, mode: Literal["article_analysis", "gap_analysis", "refine_competitor_analysis", "output_guardrail", "competitor_analysis"]) -> float:
+
+    def _get_temperature(
+        self,
+        mode: Literal[
+            "article_analysis",
+            "gap_analysis",
+            "refine_competitor_analysis",
+            "output_guardrail",
+            "competitor_analysis",
+        ],
+    ) -> float:
         """
         Returns temperature based on mode. Higher temperature for gap analysis and competitor analysis to encourage moderate creativity, while lower for article analysis and judging to enforce accuracy.
         """
@@ -71,7 +80,7 @@ class LLMService:
             return 0.15
         else:
             return 0.1
-    
+
     def _parse_retry_after(self, headers: Headers) -> float:
         """
         Extracts wait time from headers or error message.
@@ -85,15 +94,26 @@ class LLMService:
                 pass
 
         # Default backoff if retry-after header in present.
-        return 60.0 
-    
+        return 60.0
+
     async def get_llm_response(
-        self, 
-        system_prompt: str, 
+        self,
+        system_prompt: str,
         input: ResponseInputParam,
-        mode: Literal["article_analysis", "gap_analysis", "refine_competitor_analysis", "output_guardrail"],
-        fallback: bool = False
-    ) -> ArticleAnalysisOutput | GapAnalysisOutputList | CompetitorAnalysisOutput | GuardrailResult | None:
+        mode: Literal[
+            "article_analysis",
+            "gap_analysis",
+            "refine_competitor_analysis",
+            "output_guardrail",
+        ],
+        fallback: bool = False,
+    ) -> (
+        ArticleAnalysisOutput
+        | GapAnalysisOutputList
+        | CompetitorAnalysisOutput
+        | GuardrailResult
+        | None
+    ):
         """
         Fetches LLM response based on mode with retry and rate limit handling.
 
@@ -102,46 +122,46 @@ class LLMService:
             - input: The input messages for LLM.
             - mode: The mode of analysis which determines model choice and temperature.
             - fallback: Only pass this for guardrail request. (Default = False)
-        
+
         Returns:
             Parsed LLM response as per expected schema or None in case of failure.
         """
-        
+
         retries = 5
-        
+
         for attempt in range(retries):
             # Set model and response_format based on mode
             if mode == "gap_analysis":
                 model = GAP_ANALYSIS_MODEL
                 response_format = GapAnalysisOutputList
-            
+
             elif mode == "article_analysis":
                 model = self._get_next_article_analysis_model()
                 response_format = ArticleAnalysisOutput
-            
+
             elif mode == "refine_competitor_analysis":
                 model = COMPETITOR_ANALYSIS_REFINER_MODEL
                 response_format = CompetitorAnalysisOutput
-            
+
             else:
                 model = SAFEGUARD_MODELS[1] if fallback else SAFEGUARD_MODELS[0]
                 response_format = GuardrailResult
 
             try:
-                print(f"🤖 Req: {model} | Attempt {attempt+1}")
+                print(f"🤖 Req: {model} | Attempt {attempt + 1}")
 
                 response = await self.client.responses.parse(
                     model=model,
                     instructions=system_prompt,
                     input=input,
                     text_format=response_format,
-                    temperature=self._get_temperature(mode)
+                    temperature=self._get_temperature(mode),
                 )
-                
+
                 content = response.output_parsed
                 if not content:
                     raise ValueError("Empty response")
-                
+
                 return content
 
             except APIStatusError as e:
@@ -155,23 +175,25 @@ class LLMService:
                     print(f"Rate Limit ({model}). Sleeping {wait_time:.2f}s...")
                     await asyncio.sleep(wait_time)
                     continue
-                
+
                 # Log other API errors and continue.
                 print(f"API Error ({model}): {e}")
-                    
+
             except Exception as e:
                 print(f"Exception occurred: {e}")
-                
+
         return None
-    
-    async def get_llm_response_with_research(self, input: List[ChatCompletionMessageParam]) -> str:
+
+    async def get_llm_response_with_research(
+        self, input: List[ChatCompletionMessageParam]
+    ) -> str:
         """
         Fetches LLM response with retry and rate limit handling. Force tool calls, for research.
 
         Args:
             - input: The input messages for LLM.
             - mode: The mode of analysis which determines model choice and temperature.
-        
+
         Returns:
             Returns unstructured, text output.
         """
@@ -179,7 +201,9 @@ class LLMService:
 
         for attempt in range(retries):
             try:
-                print(f"🤖 Req: {COMPETITOR_ANALYSIS_RESEARCH_MODEL} | Attempt {attempt+1}")
+                print(
+                    f"🤖 Req: {COMPETITOR_ANALYSIS_RESEARCH_MODEL} | Attempt {attempt + 1}"
+                )
 
                 response = await self.groq_client.chat.completions.create(
                     model=COMPETITOR_ANALYSIS_RESEARCH_MODEL,
@@ -187,15 +211,19 @@ class LLMService:
                     temperature=self._get_temperature("competitor_analysis"),
                     compound_custom={
                         "tools": {
-                            "enabled_tools": ["browser_automation", "web_search", "visit_website"]
+                            "enabled_tools": [
+                                "browser_automation",
+                                "web_search",
+                                "visit_website",
+                            ]
                         }
-                    }
+                    },
                 )
 
-                content = response.choices[0].message.content  
+                content = response.choices[0].message.content
                 if not content:
                     raise ValueError("Empty response")
-                
+
                 return content
 
             except GroqAPIStatusError as e:
@@ -206,16 +234,19 @@ class LLMService:
                     wait_time = self._parse_retry_after(e.response.headers)
                     wait_time += 1.0
 
-                    print(f"Rate Limit ({COMPETITOR_ANALYSIS_RESEARCH_MODEL}). Sleeping {wait_time:.2f}s...")
+                    print(
+                        f"Rate Limit ({COMPETITOR_ANALYSIS_RESEARCH_MODEL}). Sleeping {wait_time:.2f}s..."
+                    )
                     await asyncio.sleep(wait_time)
                     continue
-                
+
                 # Log other API errors and continue.
                 print(f"API Error ({COMPETITOR_ANALYSIS_RESEARCH_MODEL}): {e}")
-                    
+
             except Exception as e:
                 print(f"Exception occurred: {e}")
-                
+
         return ""
+
 
 llm_service = LLMService()

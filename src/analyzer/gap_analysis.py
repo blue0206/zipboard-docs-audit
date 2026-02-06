@@ -1,24 +1,29 @@
 from typing import List
 from openai.types.responses import ResponseInputParam
-from ..models.analysis_schema import GapAnalysisInput, GapAnalysisOutput, GapAnalysisOutputList, GapAnalysisResult
+from ..models.analysis_schema import (
+    GapAnalysisInput,
+    GapAnalysisOutput,
+    GapAnalysisOutputList,
+    GapAnalysisResult,
+)
 from ..models.llm_schema import GuardrailResult
 from ..services.llm_service import llm_service
 
 
 async def run_gap_analysis(articles: List[GapAnalysisInput]) -> List[GapAnalysisResult]:
     """
-    This function takes a list of articles (of zipBoard help docs), 
+    This function takes a list of articles (of zipBoard help docs),
     with each containing metadata and analysis results, and performs
     gap analysis to find any missing pieces or issues in the overall docs.
 
     Args:
         - articles: A list of LLM-ready article inputs for gap analysis.
-    
+
     Returns:
         The gap analysis reuslt of the docs.
     """
 
-    SYSTEM_PROMPT="""
+    SYSTEM_PROMPT = """
     You are a senior Technical Documentation Auditor.
 
     Documentation Structure Context:
@@ -88,7 +93,7 @@ async def run_gap_analysis(articles: List[GapAnalysisInput]) -> List[GapAnalysis
     Your output must be actionable, specific, and suitable for stakeholder review.
     """
 
-    USER_PROMPT=f"""
+    USER_PROMPT = f"""
     Below is a structured list of documentation articles with metadata and per-article analysis.
 
     Each item contains:
@@ -127,13 +132,17 @@ async def run_gap_analysis(articles: List[GapAnalysisInput]) -> List[GapAnalysis
 
     # Generate LLM response and get insights.
     input: ResponseInputParam = [{"role": "user", "content": USER_PROMPT}]
-    response = await llm_service.get_llm_response(system_prompt=SYSTEM_PROMPT, input=input, mode="gap_analysis")
+    response = await llm_service.get_llm_response(
+        system_prompt=SYSTEM_PROMPT, input=input, mode="gap_analysis"
+    )
     assert isinstance(response, GapAnalysisOutputList)
 
     # We run the LLM response against a guardrail LLM to verify integrity and validate the response.
     # In case the guardrail returns issues, we retry ONCE, and run the guardrail again. In case
     # we encounter issue again, we simply log and return the response.
-    guardrail_results = await run_gap_analysis_guardrail(articles=articles, analysis=response.analysis)
+    guardrail_results = await run_gap_analysis_guardrail(
+        articles=articles, analysis=response.analysis
+    )
     if guardrail_results and not guardrail_results.is_valid:
         # Pass initial model response as string to preserve conversational context.
         input.append({"role": "assistant", "content": response.model_dump_json()})
@@ -147,21 +156,32 @@ async def run_gap_analysis(articles: List[GapAnalysisInput]) -> List[GapAnalysis
         Do not introduce new gaps or topics.
         """
         input.append({"role": "user", "content": RETRY_PROMPT})
-        retried_response = await llm_service.get_llm_response(system_prompt=SYSTEM_PROMPT, input=input, mode="gap_analysis")
+        retried_response = await llm_service.get_llm_response(
+            system_prompt=SYSTEM_PROMPT, input=input, mode="gap_analysis"
+        )
         assert isinstance(retried_response, GapAnalysisOutputList)
 
         # Run guardrails again, if failed, log and conitnue.
-        final_guardrail_results = await run_gap_analysis_guardrail(articles=articles, analysis=retried_response.analysis, fallback=True)
+        final_guardrail_results = await run_gap_analysis_guardrail(
+            articles=articles, analysis=retried_response.analysis, fallback=True
+        )
         if final_guardrail_results and not final_guardrail_results.is_valid:
-            print(f"Final guardrail failed for Gap Analysis after retry. Issues: {final_guardrail_results.issues}")
+            print(
+                f"Final guardrail failed for Gap Analysis after retry. Issues: {final_guardrail_results.issues}"
+            )
 
         final_result = generate_gap_ids(retried_response.analysis)
         return final_result
     else:
         final_result = generate_gap_ids(response.analysis)
         return final_result
-    
-async def run_gap_analysis_guardrail(articles: List[GapAnalysisInput], analysis: List[GapAnalysisOutput], fallback: bool = False) -> GuardrailResult | None:
+
+
+async def run_gap_analysis_guardrail(
+    articles: List[GapAnalysisInput],
+    analysis: List[GapAnalysisOutput],
+    fallback: bool = False,
+) -> GuardrailResult | None:
     """
     This function runs guardrail checks on the gap analysis to ensure
     integrity and validity of the analysis.
@@ -170,12 +190,12 @@ async def run_gap_analysis_guardrail(articles: List[GapAnalysisInput], analysis:
         - articles: The original list of articles input which forms the context for guardrail checks.
         - analysis: The generated gap analysis which needs to be validated.
         - fallback: Whether to use the fallback model for guardrail (default = False).
-    
+
     Returns:
         The guardrail result containing validity status and identified issues, or None.
     """
 
-    SYSTEM_PROMPT="""
+    SYSTEM_PROMPT = """
     You are an output validation and quality assurance system.
 
     Your role is to evaluate documentation gap analysis results for:
@@ -208,7 +228,7 @@ async def run_gap_analysis_guardrail(articles: List[GapAnalysisInput], analysis:
     Return output strictly in the required structured format.
     """
 
-    USER_PROMPT=f"""
+    USER_PROMPT = f"""
     Input:
         {[f"{article.model_dump_json()}\n" for article in articles]}
 
@@ -217,10 +237,16 @@ async def run_gap_analysis_guardrail(articles: List[GapAnalysisInput], analysis:
     """
 
     input: ResponseInputParam = [{"role": "user", "content": USER_PROMPT}]
-    response = await llm_service.get_llm_response(system_prompt=SYSTEM_PROMPT, input=input, mode="output_guardrail", fallback=fallback)
+    response = await llm_service.get_llm_response(
+        system_prompt=SYSTEM_PROMPT,
+        input=input,
+        mode="output_guardrail",
+        fallback=fallback,
+    )
     if isinstance(response, GuardrailResult):
         return response
     return None
+
 
 def generate_gap_ids(analysis: List[GapAnalysisOutput]) -> List[GapAnalysisResult]:
     """
@@ -228,7 +254,7 @@ def generate_gap_ids(analysis: List[GapAnalysisOutput]) -> List[GapAnalysisResul
 
     Args:
         - analysis: The generated gap analysis.
-    
+
     Returns:
         The complete, spreadsheet-ready gap analysis results with ID.
     """
@@ -236,9 +262,6 @@ def generate_gap_ids(analysis: List[GapAnalysisOutput]) -> List[GapAnalysisResul
     results: List[GapAnalysisResult] = []
 
     for idx, gap in enumerate(analysis, start=1):
-        results.append(GapAnalysisResult(
-            gap_id=f"GAP-{idx:03d}",
-            analysis=gap
-        ))
-    
+        results.append(GapAnalysisResult(gap_id=f"GAP-{idx:03d}", analysis=gap))
+
     return results

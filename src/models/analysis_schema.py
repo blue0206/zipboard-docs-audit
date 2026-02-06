@@ -90,10 +90,12 @@ class GapAnalysisOutput(BaseModel):
     rationale: str
     suggested_article_title: str
 
+
 # This will be passed as response_format property to LLM
 # as the client does not accept List[Type] directly.
 class GapAnalysisOutputList(BaseModel):
     analysis: List[GapAnalysisOutput]
+
 
 # The Gap Analysis output returned by LLM is provided a gap_id
 # to help uniquely identify the gap analysis data.

@@ -163,7 +163,10 @@ def normalize_analyzed_articles_to_catalogue(
 
     return catalogue
 
-def normalize_articles_to_gap_analysis_input(analyzed_articles: List[ArticleAnalysisResult], articles: List[ArticlesCatalogue]) -> List[GapAnalysisInput]:
+
+def normalize_articles_to_gap_analysis_input(
+    analyzed_articles: List[ArticleAnalysisResult], articles: List[ArticlesCatalogue]
+) -> List[GapAnalysisInput]:
     """
     This function combines the article catalogue metadata with the analysis output
     from LLM to create structure for LLM ingestion for Gap Analysis.
@@ -192,18 +195,20 @@ def normalize_articles_to_gap_analysis_input(analyzed_articles: List[ArticleAnal
         if not analysis:
             continue
 
-        gap_analysis_input.append(GapAnalysisInput(
-            article_id=article.article_id,
-            article_title=article.article_title,
-            category=article.category,
-            collection=article.collection,
-            content_type=article.content_type,
-            identified_gaps=article.identified_gaps,
-            primary_topic=analysis.primary_topic,
-            quality_score=article.quality_score,
-            target_audience=article.target_audience,
-            topics_covered=article.topics_covered,
-            url=article.url
-        ))
+        gap_analysis_input.append(
+            GapAnalysisInput(
+                article_id=article.article_id,
+                article_title=article.article_title,
+                category=article.category,
+                collection=article.collection,
+                content_type=article.content_type,
+                identified_gaps=article.identified_gaps,
+                primary_topic=analysis.primary_topic,
+                quality_score=article.quality_score,
+                target_audience=article.target_audience,
+                topics_covered=article.topics_covered,
+                url=article.url,
+            )
+        )
 
     return gap_analysis_input

@@ -33,7 +33,7 @@ def update_google_sheets(
         worksheet.clear()
 
         rows: List[List[str]] = []
-        
+
         # Sheet Title
         rows.append([sheet_name])
 
@@ -53,7 +53,7 @@ def update_google_sheets(
 
 def update_competitor_analysis_sheet(
     competitor_comparison_data: List[Dict],
-    competitor_analysis_insights_data: List[Dict]
+    competitor_analysis_insights_data: List[Dict],
 ) -> None:
     """
     This function updates the "Competitor Analysis" Google Sheet with the provided data.
@@ -74,7 +74,9 @@ def update_competitor_analysis_sheet(
         try:
             worksheet = sheet.worksheet("Competitor Analysis")
         except Exception:
-            worksheet = sheet.add_worksheet(title="Competitor Analysis", rows=1000, cols=20)
+            worksheet = sheet.add_worksheet(
+                title="Competitor Analysis", rows=1000, cols=20
+            )
 
         worksheet.clear()
 
@@ -92,7 +94,7 @@ def update_competitor_analysis_sheet(
 
         for row in competitor_comparison_data:
             rows.append(list(row.values()))
-        
+
         # Spacing
         rows.extend([[], [], []])
 
