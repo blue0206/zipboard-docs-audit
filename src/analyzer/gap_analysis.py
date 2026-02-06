@@ -83,11 +83,12 @@ async def run_gap_analysis(articles: List[GapAnalysisInput]) -> List[GapAnalysis
     - Base every gap strictly on the provided input data
     - Use metadata, topics covered, content types, quality scores, and micro-gaps
     - Avoid speculation or undocumented features
-    - Identify AT LEAST 5 gaps TOTAL
+    - Identify as many gaps as genuinely exist, 11+ is good, but at least 5 TOTAL.
+    - Ensure at least 4 HIGH priority gaps if they genuinely exist
     - Ensure a MIX of priorities (high, medium, low) where realistically applicable
 
-    If fewer than 3 high-priority gaps genuinely exist:
-    - Include medium and low priority gaps to reach a minimum of 5
+    If fewer than 4 high-priority gaps genuinely exist:
+    - Include medium and low priority gaps
     - Do NOT artificially inflate priority
 
     Your output must be actionable, specific, and suitable for stakeholder review.
