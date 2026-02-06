@@ -70,15 +70,21 @@ async def run_gap_analysis(articles: List[GapAnalysisInput]) -> List[GapAnalysis
     - Missing onboarding, conceptual grounding, or advanced guidance
     - Documentation that exists but does not sufficiently serve its audience
 
+    Priority Guidelines (IMPORTANT):
+    - High priority gaps should represent critical blockers to adoption, usability, or scale.
+    - Medium priority gaps should represent noticeable friction or incomplete guidance.
+    - Low priority gaps should represent polish, depth, or long-term improvements.
+
     You must:
     - Base every gap strictly on the provided input data
     - Use metadata, topics covered, content types, quality scores, and micro-gaps
     - Avoid speculation or undocumented features
-    - Identify AT LEAST 5 gaps
+    - Identify AT LEAST 5 gaps TOTAL
+    - Ensure a MIX of priorities (high, medium, low) where realistically applicable
 
-    If fewer than 5 high-impact gaps exist:
-    - Include medium or low-impact gaps to reach a minimum of 5
-    - Clearly label priority honestly
+    If fewer than 3 high-priority gaps genuinely exist:
+    - Include medium and low priority gaps to reach a minimum of 5
+    - Do NOT artificially inflate priority
 
     Your output must be actionable, specific, and suitable for stakeholder review.
     """
@@ -93,11 +99,15 @@ async def run_gap_analysis(articles: List[GapAnalysisInput]) -> List[GapAnalysis
     - Identified gaps at the article level
 
     Your task:
-    1. Identify at least 5 HIGH-IMPACT documentation gaps that emerge across the entire corpus.
+    1. Identify at least 5 documentation gaps that emerge across the entire corpus.
+    2. Gaps must represent a MIX of:
+        - High priority (critical blockers)
+        - Medium priority (significant friction or inconsistency)
+        - Low priority (depth, clarity, or long-term improvement)
     2. Each gap must be:
-    - Clearly described
-    - Supported by evidence from multiple articles
-    - Relevant at a documentation-wide level (not article-specific)
+        - Clearly described
+        - Supported by evidence from multiple articles
+        - Relevant at a documentation-wide level (not article-specific)
     3. Assign a priority (low / medium / high) based on user impact.
     4. Clearly state who is affected (beginner / intermediate / advanced / mixed).
     5. Provide a concrete recommendation for addressing each gap.
