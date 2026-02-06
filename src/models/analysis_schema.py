@@ -42,3 +42,17 @@ class ArticlesCatalogue(BaseModel):
     quality_score: int = Field(ge=1, le=5)
     identified_gaps: List[str]
     topics_covered: List[str]
+
+class GapAnalysisInput(BaseModel):
+    article_id: str
+    article_title: str
+    category: str
+    collection: str
+    url: str
+    primary_topic: str
+    content_type: Literal["how_to", "conceptual", "faq", "troubleshooting", "mixed", "reference"]
+    target_audience: Literal["beginner", "intermediate", "advanced", "mixed"]
+    quality_score: int = Field(ge=1, le=5)
+    identified_gaps: List[str]
+    topics_covered: List[str]
+
