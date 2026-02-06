@@ -2,6 +2,8 @@ from typing import List, Literal, Optional
 from pydantic import BaseModel
 
 
+# Represents a block of content (NOT total content) of a scraped article
+# in a structured format.
 class ArticleContent(BaseModel):
     type: Literal["heading", "callout", "paragraph", "video", "image", "table", "list"]
     text: Optional[str] = None  # Text content
@@ -17,6 +19,7 @@ class ArticleContent(BaseModel):
     ordered: Optional[bool] = None  # for lists, true if ordered list
 
 
+# Represents the scraped and processed data of an entire article.
 class Article(BaseModel):
     article_id: str
     article_title: str
@@ -29,16 +32,18 @@ class Article(BaseModel):
     content: List[ArticleContent]
 
 
+# Represents the scraped and processed data of a Category.
 class Category(BaseModel):
     category_id: str
     category_title: str
-    articles: List[Article]
     total_articles: int
     category_description: Optional[str]
+    articles: List[Article]
 
 
+# Represents the scraped and processed data of a Collection.
 class Collection(BaseModel):
     collection_id: str
     collection_title: str
-    categories: List[Category]
     total_categories: int
+    categories: List[Category]
