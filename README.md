@@ -2,9 +2,46 @@
 
 An ETL and Intelligence pipeline that automates the audit of the zipBoard Help Center.
 
-## 📖 Overview
+## Table of Contents
+
+- [zipBoard Docs Audit \& Gap Analysis Agent](#zipboard-docs-audit--gap-analysis-agent)
+  - [Table of Contents](#table-of-contents)
+  - [Overview](#overview)
+  - [Upcoming Changes (WIP)](#upcoming-changes-wip)
+  - [High-Level Workflow](#high-level-workflow)
+  - [LLM-Prompt Templates and Model Usage](#llm-prompt-templates-and-model-usage)
+    - [Article Analysis](#article-analysis)
+      - [System Prompt:](#system-prompt)
+      - [User Prompt:](#user-prompt)
+    - [Gap Analysis](#gap-analysis)
+      - [System Prompt](#system-prompt-1)
+      - [User Prompt](#user-prompt-1)
+    - [Competitor Analysis](#competitor-analysis)
+      - [System Prompt](#system-prompt-2)
+      - [User prompt](#user-prompt-2)
+  - [Deployment](#deployment)
+
+## Overview
 
 This system is an **Agentic Pipeline** exposed via a FastAPI endpoint. It scrapes the entire documentation site, analyzes the data using LLMs, performs a gap analysis, performs competitor analysis, and syncs the results to Google Sheets.
+
+
+## Upcoming Changes (WIP)
+
+1. If you've looked at the context passed for Gap and Competitor Analysis, you must have realised IT IS NOT SCALABLE. Even though we're just passing metadata + analysis data, we're still easily overflowing the token limits (at articles >= 50). Hence we need to pass something which doesn't take too much space no matter how many articles there are. But HOW? Here's an idea:
+
+    - Instead of passing the metadata and analysis data of each article, we instead pass a Corpus-Level:
+        - Summary: How many articles, categories, collections.
+        - Coverage Metrics: Topics frequency, topics distribution, undercovered topics, etc.
+        - Audience (Level) Metrics: Audience distribution, underserved audience, etc.
+        - Content Type Metrics: Missing content types, content type distribution, etc.
+        - and various other Metrics.
+        And this possible, easily, thanks to the data we get from Per-Article analysis!
+
+2. Currently, there's a single endpoint exposed which depends on Google Sheets scheduler. When run it perform: Scraping, Article Analysis, Gap Analysis, and Competitor Analysis. Therefore, this is SLOW (painfully so, even with asyncio). Here are the propsed changes:
+
+    - Set up a scheduler in-app which scrapes ALL articles every 24 hours and stores in-memory (I think that's okay for now).
+    - Expose a single endpoint which ONLY performs the 3 analysis and updates sheets. We can introduce separate endpoints for them but that would be redundant work as Gap and Competitor Analysis depend on Article Analysis results. This alone greatly reduces the scraping time.
 
 ## High-Level Workflow
 
@@ -343,3 +380,6 @@ Perform competitor documentation research and provide:
 
 > Again, we should limit article metadata context using steps proposed above.
 
+## Deployment
+
+- This repo is deployed on Railway.
