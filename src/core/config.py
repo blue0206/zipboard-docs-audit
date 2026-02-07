@@ -8,6 +8,7 @@ class Settings(BaseSettings):
     # LLM
     GROQ_API_KEY: str
     GROQ_BASE_URL: str = "https://api.groq.com/openai/v1"
+    MAX_CONCURRENT_LLM_CALLS: int = 2
     # Google Sheets
     GOOGLE_CREDS_JSON: str
     SHEET_ID: str

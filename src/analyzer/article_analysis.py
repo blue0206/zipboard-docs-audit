@@ -1,6 +1,7 @@
 import asyncio
 from typing import List
 from openai.types.responses import ResponseInputParam
+from ..core.config import env_settings
 from ..services.llm_service import llm_service
 from ..models.analysis_schema import (
     ArticleAnalysisInput,
@@ -11,7 +12,7 @@ from ..models.llm_schema import GuardrailResult
 
 
 async def analyze_articles(
-    articles: List[ArticleAnalysisInput],
+    articles: List[ArticleAnalysisInput]
 ) -> List[ArticleAnalysisResult]:
     """
     This function takes in a list of LLM-ready article inputs, and runs the
@@ -26,7 +27,11 @@ async def analyze_articles(
     Returns:
         A list of article analysis outputs from LLM.
     """
-    semaphore = asyncio.Semaphore(2)
+    # Default value is 2. This has been set using the formula: Floor[(No. of Article Analysis Models)/2]
+    # In this case, we have 5 models hence a value of Floor(5/2) = 2 is good.
+    # This ensures there are models free while others are working, giving us time to cool off their
+    # rate-limit.
+    semaphore = asyncio.Semaphore(env_settings.MAX_CONCURRENT_LLM_CALLS)
 
     results = await asyncio.gather(
         *[run_article_analysis(a, semaphore) for a in articles]
