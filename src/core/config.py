@@ -9,6 +9,7 @@ class Settings(BaseSettings):
     GROQ_API_KEY: str
     GROQ_BASE_URL: str = "https://api.groq.com/openai/v1"
     # Google Sheets
+    GOOGLE_CREDS_JSON: str
     SHEET_ID: str
     # API
     AUTH_TOKEN: str  # auth token to access this API

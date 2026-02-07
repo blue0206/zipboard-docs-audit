@@ -1,8 +1,7 @@
+import json
 import gspread
 from typing import Dict, List, Literal
 from ..core.config import env_settings
-
-SERVICE_ACCOUNT_FILE = "service_account.json"
 
 
 def update_google_sheets(
@@ -21,7 +20,8 @@ def update_google_sheets(
     """
     try:
         # Auth
-        gc = gspread.service_account(filename=SERVICE_ACCOUNT_FILE)
+        auth_dict = json.loads(env_settings.GOOGLE_CREDS_JSON)
+        gc = gspread.service_account_from_dict(auth_dict)
         sheet = gc.open_by_key(env_settings.SHEET_ID)
 
         # Get or create the worksheet.
@@ -67,7 +67,8 @@ def update_competitor_analysis_sheet(
     """
     try:
         # Auth
-        gc = gspread.service_account(filename=SERVICE_ACCOUNT_FILE)
+        auth_dict = json.loads(env_settings.GOOGLE_CREDS_JSON)
+        gc = gspread.service_account_from_dict(auth_dict)
         sheet = gc.open_by_key(env_settings.SHEET_ID)
 
         # Get or create the worksheet.
