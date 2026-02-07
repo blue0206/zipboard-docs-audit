@@ -38,6 +38,8 @@ This system is an **Agentic Pipeline** exposed via a FastAPI endpoint. It scrape
         - and various other Metrics.
         And this possible, easily, thanks to the data we get from Per-Article analysis!
 
+    > I could have done this before submission but I lost a whole day (no thanks to fever.)
+
 2. Currently, there's a single endpoint exposed which depends on Google Sheets scheduler. When run it perform: Scraping, Article Analysis, Gap Analysis, and Competitor Analysis. Therefore, this is SLOW (painfully so, even with asyncio). Here are the propsed changes:
 
     - Set up a scheduler in-app which scrapes ALL articles every 24 hours and stores in-memory (I think that's okay for now).
@@ -254,7 +256,7 @@ Rules:
 {[f"{article.model_dump_json()}\n" for article in articles]}
 ```
 
-> Passing entire article content will almost always cross the token limits when articles processed > 40. A better way to handle this is to further trim the article metadata, or pass a handful of articles from each category, or pass an overall corpus summary.
+> Passing entire article content will almost always cross the token limits when articles processed >= 50. A better way to pass an overall corpus summary with metrics.
 
 ### Competitor Analysis
 
