@@ -124,7 +124,13 @@ async def run_article_analysis(
         response = await llm_service.get_llm_response(
             system_prompt=SYSTEM_PROMPT, input=input, mode="article_analysis"
         )
-        assert isinstance(response, ArticleAnalysisOutput)
+
+        try:
+            assert isinstance(response, ArticleAnalysisOutput)
+        except Exception as e:
+            # We simply return None instead of raising error.
+            print(f"Article Analysis output assertion failed: {str(e)}")
+            return None
 
         # We run the LLM response against a guardrail LLM to verify integrity and validate the response.
         # In case the guardrail returns issues, we retry ONCE, and run the guardrail again. In case
@@ -148,7 +154,15 @@ async def run_article_analysis(
             retried_response = await llm_service.get_llm_response(
                 system_prompt=SYSTEM_PROMPT, input=input, mode="article_analysis"
             )
-            assert isinstance(retried_response, ArticleAnalysisOutput)
+
+            try:
+                assert isinstance(retried_response, ArticleAnalysisOutput)
+            except Exception as e:
+                # We simply return the previous response instead of raising error.
+                # Since its structure is correct, this is acceptable as
+                # something is better than nothing.
+                print(f"Article Analysis output assertion failed, returning previous try response.\nError Details: {str(e)}")
+                return response
 
             # Run guardrails again, if failed, log and conitnue.
             final_guardrail_results = await run_article_analysis_guardrail(
