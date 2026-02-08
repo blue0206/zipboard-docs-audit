@@ -19,7 +19,6 @@ class ArticleAnalysisInput(BaseModel):
 
 # The Article Analysis output returned by LLM is parsed by this model.
 class ArticleAnalysisOutput(BaseModel):
-    primary_topic: str
     topics_covered: List[str]
     content_type: Literal[
         "how-to", "conceptual", "faq", "troubleshooting", "mixed", "reference"
@@ -140,6 +139,5 @@ class CompetitorInsight(BaseModel):
 
 # The Competitor Analysis output returned by LLM is parsed by this model.
 class CompetitorAnalysisOutput(BaseModel):
-    competitors_analyzed: List[str]
     competitor_comparisons: List[CompetitorComparison]
     competitor_insights: List[CompetitorInsight]
