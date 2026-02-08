@@ -239,7 +239,12 @@ async def refine_gap_analysis(articles: List[GapAnalysisInput], response_text: s
         retried_response = await llm_service.get_llm_response(
             system_prompt=SYSTEM_PROMPT, input=input, mode="refine_competitor_analysis"
         )
-        assert isinstance(retried_response, GapAnalysisOutputList)
+
+        try:
+            assert isinstance(retried_response, GapAnalysisOutputList)
+        except Exception as e:
+            print(f"Gap Analysis output assertion failed, returning previous try response.\nError Details: {str(e)}")
+            return response
 
         # Run guardrails again, if failed, log and conitnue.
         final_guardrail_results = await run_gap_analysis_guardrail(articles=articles, analysis=retried_response.analysis, fallback=True)

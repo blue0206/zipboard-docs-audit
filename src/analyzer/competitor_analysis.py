@@ -247,7 +247,12 @@ async def refine_competitor_analysis_research(
         retried_response = await llm_service.get_llm_response(
             system_prompt=SYSTEM_PROMPT, input=input, mode="refine_competitor_analysis"
         )
-        assert isinstance(retried_response, CompetitorAnalysisOutput)
+
+        try:
+            assert isinstance(retried_response, CompetitorAnalysisOutput)
+        except Exception as e:
+            print(f"Competitor Analysis output assertion failed, returning previous try response.\nError Details: {str(e)}")
+            return response
 
         # Run guardrails again, if failed, log and conitnue.
         final_guardrail_results = await run_competitor_analysis_guardrail(
