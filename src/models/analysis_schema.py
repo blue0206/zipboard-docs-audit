@@ -74,12 +74,6 @@ class CorpusSummary(BaseModel):
     media_per_category: Dict[str, int]
 
 
-class CoverageMetrics(BaseModel):
-    category_topic_coverage: Dict[str, List[str]] = Field(
-        description="List of topics per category."
-    )
-
-
 class AudienceMetrics(BaseModel):
     audience_distribution: Dict[
         Literal["beginner", "intermediate", "advanced", "mixed"], int
@@ -185,7 +179,6 @@ class StructuralObservations(BaseModel):
 # This is the finalized schema provided to LLM as context for Gap Analysis.
 class GapAnalysisInput(BaseModel):
     corpus_summary: CorpusSummary
-    coverage_metrics: CoverageMetrics
     audience_metrics: AudienceMetrics
     content_type_metrics: ContentTypeMetrics
     quality_metrics: QualityMetrics

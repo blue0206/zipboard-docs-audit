@@ -29,17 +29,13 @@ async def run_gap_analysis(analysis_input: GapAnalysisInput) -> List[GapAnalysis
 
     You are performing a DOCUMENTATION-WIDE GAP ANALYSIS for zipBoard.
 
-    This is a CORPUS-LEVEL analysis.
-    You are NOT reviewing individual articles.
-
     ---
 
     Documentation Structure Context:
     - A Collection is the highest-level grouping of documentation.
     - Each Collection contains multiple Categories.
     - Each Category contains multiple Articles.
-    - Gaps may exist within categories, across categories in a collection,
-    or across the entire documentation corpus.
+    - Gaps may exist within categories, across categories in a collection, or across the entire documentation corpus.
 
     ---
 
@@ -87,20 +83,26 @@ async def run_gap_analysis(analysis_input: GapAnalysisInput) -> List[GapAnalysis
     - Gap signals
     - Structural observations
 
-    You MUST base your analysis STRICTLY on these metrics.
+    You MUST:
+    - Use the provided corpus metrics as high-level signals
+    - Validate, expand, and contextualize them through direct documentation research
+    - Resolve ambiguities by inspecting the documentation directly
 
     ---
 
-    Tool Usage (ALLOWED):
-    You MAY use tools (browser_automation, web_search, visit_website) ONLY to:
-    - Validate industry documentation norms
-    - Cross-check structural expectations
-    - Confirm standard documentation practices
+    Tool Usage (REQUIRED):
+    You MUST actively perform research using available tools:
+    - browser_automation
+    - visit_website
+    - web_search
+    
+    Your research MUST include:
+    - Navigating zipBoard documentation categories
+    - Inspecting onboarding flows and first-time user guidance
+    - Reviewing advanced, API, and integration documentation
+    - Observing documentation depth, progression, and structure
 
-    You MUST NOT:
-    - Infer new zipBoard features
-    - Invent undocumented content
-    - Replace metric-based reasoning with assumptions
+    The provided corpus metrics are ORIENTING SIGNALS — not replacements for research.
 
     ---
 
@@ -137,6 +139,8 @@ async def run_gap_analysis(analysis_input: GapAnalysisInput) -> List[GapAnalysis
     - Include medium and low priority gaps
     - Do NOT artificially inflate priority
 
+    You MUST NOT perform gap analysis solely by interpreting metrics without inspecting the documentation.
+
     Your output must be:
     - Evidence-backed
     - Actionable
@@ -146,15 +150,8 @@ async def run_gap_analysis(analysis_input: GapAnalysisInput) -> List[GapAnalysis
     USER_PROMPT = f"""
     You are provided with a STRUCTURED CORPUS-LEVEL SNAPSHOT of zipBoard documentation.
 
-    This snapshot includes:
-    - Corpus summary (counts, structure, media usage)
-    - Coverage metrics (topics per category)
-    - Audience distribution and progression signals
-    - Content type distribution
-    - Quality metrics
-    - Gap density and structural observations
-
-    Documentation URL (for reference and validation): https://help.zipboard.co
+    Documentation URL (PRIMARY SOURCE for research): https://help.zipboard.co 
+    You are expected to explore this documentation directly using tools.
 
     ---
 
@@ -178,10 +175,9 @@ async def run_gap_analysis(analysis_input: GapAnalysisInput) -> List[GapAnalysis
 
     Rules:
     - Do NOT invent missing features or product behavior.
-    - Do NOT restate metrics verbatim — interpret them
+    - Do NOT restate metrics verbatim, interpret them.
     - Do NOT repeat the same gap using different wording.
     - Do NOT speculate beyond the data
-    - Do NOT reference raw article content.
 
     ---
 
@@ -259,6 +255,10 @@ async def refine_gap_analysis(
     - High priority gaps should represent critical blockers to adoption, usability, or scale.
     - Medium priority gaps should represent noticeable friction or incomplete guidance.
     - Low priority gaps should represent polish, depth, or long-term improvements.
+
+    ---
+    
+    IMPORTANT: Return output strictly in the required structured format.
     """
 
     USER_PROMPT = f"""
@@ -282,6 +282,10 @@ async def refine_gap_analysis(
     - Do NOT add product features
     - Do NOT reference raw article content
     - Do NOT include analysis text outside the schema
+
+    ---
+
+    IMPORTANT: Return output strictly in the required structured format.
 
     Unstructured Gap Analysis Input:
 
@@ -369,7 +373,10 @@ async def run_gap_analysis_guardrail(
     - Missing rationale or evidence
     - Overly generic or vague recommendations
 
-    The input analysis is based on PRE-COMPUTED CORPUS METRICS.
+    The input analysis is based on:
+    - Pre-computed corpus-level metrics
+    - Direct documentation research via tools
+
     Flag issues if:
     - Evidence contradicts provided metrics
     - Gaps reference signals not present in the input

@@ -25,7 +25,7 @@ ARTICLE_ANALYSIS_MODELS = [
     "meta-llama/llama-4-scout-17b-16e-instruct",
 ]
 # Gap analysis is done once for entire scraped batch, hence a single model will do.
-GAP_ANALYSIS_MODEL = "groq/compound-mini"
+GAP_ANALYSIS_MODEL = "groq/compound"
 # Groq Compound model can perform browser automation, web search, and visit URLs, hence
 # this can be helpful for competitor analysis.
 COMPETITOR_ANALYSIS_RESEARCH_MODEL = "groq/compound"

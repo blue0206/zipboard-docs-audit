@@ -87,6 +87,11 @@ async def run_competitor_analysis(
     3. Compare competitor documentation approaches against zipBoard's current documentation coverage (provided separately).
     4. Derive actionable insights that inform how zipBoard can improve its documentation strategy.
 
+    You MUST:
+    - Actively research zipBoard documentation in addition to competitor documentation
+    - Use the provided corpus snapshot only as orientation
+    - Resolve uncertainties by inspecting zipBoard docs directly
+
     ---
 
     Constraints & Rules:
@@ -234,7 +239,9 @@ async def refine_competitor_analysis_research(
     - Ensure schema compliance.
     - Be concise and factual.
 
-    Return output strictly in the required structured format.
+    ---
+
+    IMPORTANT: Return output strictly in the required structured format.
     """
 
     USER_PROMPT = f"""
@@ -246,8 +253,11 @@ async def refine_competitor_analysis_research(
     - Extract documentation insights for zipBoard
     - Assign a confidence score to EACH entry
 
-    Do NOT add new facts.
-    Do NOT perform new research.
+    Do NOT: 
+    - add new facts.
+    - perform new research.
+    
+    IMPORTANT: Return output strictly in the required structured format.
 
     ---
 

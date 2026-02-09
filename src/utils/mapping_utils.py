@@ -8,7 +8,6 @@ from ..models.analysis_schema import (
     AudienceMetrics,
     ContentTypeMetrics,
     CorpusSummary,
-    CoverageMetrics,
     GapAnalysisInput,
     GapSignals,
     QualityMetrics,
@@ -189,7 +188,6 @@ def generate_gap_analysis_input(
 
     # Compute metrics.
     corpus_summary = compute_corpus_summary(scraped_data, articles)
-    coverage_metrics = compute_coverage_metrics(scraped_data, articles)
     audience_metrics = compute_audience_metrics(scraped_data, articles)
     content_type_metrics = compute_content_type_metrics(scraped_data, articles)
     quality_metrics = compute_quality_metrics(scraped_data, articles)
@@ -198,7 +196,6 @@ def generate_gap_analysis_input(
 
     return GapAnalysisInput(
         corpus_summary=corpus_summary,
-        coverage_metrics=coverage_metrics,
         audience_metrics=audience_metrics,
         content_type_metrics=content_type_metrics,
         quality_metrics=quality_metrics,
@@ -255,35 +252,6 @@ def compute_corpus_summary(
         media_per_collection=media_per_collection,
         media_per_category=media_per_category,
     )
-
-
-def compute_coverage_metrics(
-    scraped_data: List[Collection], articles: List[ArticlesCatalogue]
-) -> CoverageMetrics:
-    """
-    This function computes coverage metrics from scraped data and articles catalogue.
-
-    Args:
-        scraped_data (List[Collection]): The entire scraped data.
-        articles (List[ArticlesCatalogue]): The list of articles catalogue.
-
-    Returns:
-        CoverageMetrics: The computed coverage metrics as object.
-    """
-
-    # Init schema vars to be computed.
-    category_topic_coverage: Dict[str, List[str]] = {}
-
-    # Initialize dict with category keys and initial values using scraped data.
-    for collection in scraped_data:
-        for category in collection.categories:
-            category_topic_coverage[category.category_title] = []
-
-    # Update values.
-    for article in articles:
-        category_topic_coverage[article.category].extend(article.topics_covered)
-
-    return CoverageMetrics(category_topic_coverage=category_topic_coverage)
 
 
 def compute_audience_metrics(
