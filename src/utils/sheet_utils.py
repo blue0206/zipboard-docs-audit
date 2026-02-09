@@ -5,7 +5,6 @@ from ..models.analysis_schema import (
     GapAnalysisResult,
 )
 
-
 def flatten_articles_catalogue(articles: List[ArticlesCatalogue]) -> List[Dict]:
     """
     This function flattens ArticlesCatalogue data into a list of dictionaries
@@ -23,8 +22,8 @@ def flatten_articles_catalogue(articles: List[ArticlesCatalogue]) -> List[Dict]:
                 "Category": article.category,
                 "URL": article.url,
                 "Content Type": article.content_type.title(),
-                "Topics Covered": ", ".join(article.topics_covered),
-                "Gaps Identified": ", ".join(article.identified_gaps),
+                "Topics Covered": "\n".join(f"• {item}" for item in article.topics_covered),
+                "Gaps Identified": "\n".join(f"• {item}" for item in article.identified_gaps),
                 "Quality Score": article.quality_score,
                 "Target Audience": article.target_audience.title(),
                 "Last Updated": article.last_updated,
@@ -55,9 +54,9 @@ def flatten_gap_analysis_result(analysis_data: List[GapAnalysisResult]) -> List[
                 "Collection": gap.analysis.collection,
                 "Priority": gap.analysis.priority.title(),
                 "Affected Audience": gap.analysis.affected_audience.title(),
-                "Evidence": ", ".join(gap.analysis.evidence),
+                "Evidence": "\n".join(f"• {item}" for item in gap.analysis.evidence),
                 "Recommendation": gap.analysis.recommendation,
-                "Related Topics": ", ".join(gap.analysis.related_topics),
+                "Related Topics": "\n".join(f"• {item}" for item in gap.analysis.related_topics),
                 "Rationale": gap.analysis.rationale,
                 "Suggested Article Title": gap.analysis.suggested_article_title,
             }
@@ -81,12 +80,12 @@ def flatten_competitor_comparison(
             {
                 "Competitor Name": data.competitor_name,
                 "Docs URL": data.docs_url,
-                "Docs Strengths": ", ".join(data.docs_strengths),
-                "Docs Weaknesses": ", ".join(data.docs_weaknesses),
+                "Docs Strengths": "\n".join(f"• {item}" for item in data.docs_strengths),
+                "Docs Weaknesses": "\n".join(f"• {item}" for item in data.docs_weaknesses),
                 "Onboarding Coverage": data.onboarding_coverage.title(),
                 "Advanced Feature Coverage": data.advanced_feature_coverage.title(),
                 "Docs Structure": data.docs_structure.title(),
-                "Notable Documentation Patterns": ", ".join(data.notable_docs_patterns),
+                "Notable Documentation Patterns": "\n".join(f"• {item}" for item in data.notable_docs_patterns),
                 "Confidence Score": data.confidence_score,
             }
         )
