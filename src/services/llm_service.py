@@ -64,7 +64,7 @@ class LLMService:
             "refine_competitor_analysis",
             "output_guardrail",
             "competitor_analysis",
-            "refine_gap_analysis"
+            "refine_gap_analysis",
         ],
     ) -> float:
         """
@@ -193,7 +193,9 @@ class LLMService:
         return None
 
     async def get_llm_response_with_groq(
-        self, input: List[ChatCompletionMessageParam], mode: Literal["competitor_analysis", "gap_analysis"]
+        self,
+        input: List[ChatCompletionMessageParam],
+        mode: Literal["competitor_analysis", "gap_analysis"],
     ) -> str:
         """
         Fetches LLM response with retry and rate limit handling. Force tool calls, for research.
@@ -206,13 +208,15 @@ class LLMService:
             Returns unstructured, text output.
         """
         retries = 5
-        model = COMPETITOR_ANALYSIS_RESEARCH_MODEL if mode == "competitor_analysis" else GAP_ANALYSIS_MODEL
+        model = (
+            COMPETITOR_ANALYSIS_RESEARCH_MODEL
+            if mode == "competitor_analysis"
+            else GAP_ANALYSIS_MODEL
+        )
 
         for attempt in range(retries):
             try:
-                print(
-                    f"🤖 Req: {model} | Attempt {attempt + 1}"
-                )
+                print(f"🤖 Req: {model} | Attempt {attempt + 1}")
 
                 response = await self.groq_client.chat.completions.create(
                     model=model,
@@ -226,7 +230,7 @@ class LLMService:
                                 "visit_website",
                             ]
                         }
-                    }
+                    },
                 )
 
                 content = response.choices[0].message.content
@@ -248,9 +252,7 @@ class LLMService:
                     wait_time = self._parse_retry_after(e.response.headers)
                     wait_time += 1.0
 
-                    print(
-                        f"Rate Limit ({model}). Sleeping {wait_time:.2f}s..."
-                    )
+                    print(f"Rate Limit ({model}). Sleeping {wait_time:.2f}s...")
                     await asyncio.sleep(wait_time)
                     continue
 

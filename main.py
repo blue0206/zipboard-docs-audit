@@ -17,12 +17,11 @@ app.add_middleware(
 
 app.include_router(router=router, prefix="/api/v1")
 
+
 @app.get("/api/v1/healthcheck")
 async def healthcheck_handler():
     return ApiResponse(
-        success=True,
-        status_code=200,
-        payload="The server is up and running."
+        success=True, status_code=200, payload="The server is up and running."
     )
 
 

@@ -15,19 +15,17 @@ HEADER_FORMAT = CellFormat(
     backgroundColor={"red": 0.93, "green": 0.94, "blue": 0.96},
     textFormat=TextFormat(bold=True, fontSize=16),
     horizontalAlignment="CENTER",
-    wrapStrategy="WRAP"
+    wrapStrategy="WRAP",
 )
 
 TITLE_FORMAT = CellFormat(
     textFormat=TextFormat(bold=True, fontSize=13),
     horizontalAlignment="CENTER",
-    wrapStrategy="WRAP"
+    wrapStrategy="WRAP",
 )
 
 BODY_FORMAT = CellFormat(
-    horizontalAlignment="CENTER",
-    verticalAlignment="TOP",
-    wrapStrategy="WRAP"
+    horizontalAlignment="CENTER", verticalAlignment="TOP", wrapStrategy="WRAP"
 )
 
 COLUMN_WIDTHS_ARTICLES_CATALOGUE = {
@@ -85,9 +83,15 @@ COLUMN_WIDTHS_INSIGHTS = {
     "G": 150,
 }
 
+
 def update_google_sheets(
     flattened_data: List[Dict],
-    sheet_name: Literal["Articles Catalogue", "Gap Analysis", "Competitor Comparison", "Strategic Insights & Recommendations"],
+    sheet_name: Literal[
+        "Articles Catalogue",
+        "Gap Analysis",
+        "Competitor Comparison",
+        "Strategic Insights & Recommendations",
+    ],
 ) -> None:
     """
     This function updates the respective Google Sheets with the provided data.
@@ -157,7 +161,10 @@ def update_google_sheets(
         print(f"Error {sheet_name} sheet: {e}")
         raise e
 
-def update_worksheet_cols(worksheet: gspread.Worksheet, col_widths: Dict[str, int]) -> None:
+
+def update_worksheet_cols(
+    worksheet: gspread.Worksheet, col_widths: Dict[str, int]
+) -> None:
     """
     This function applies accepts a worksheet instance and column widths rules
     and applies them on the sheet.

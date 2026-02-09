@@ -12,7 +12,7 @@ from ..models.llm_schema import GuardrailResult
 
 
 async def analyze_articles(
-    articles: List[ArticleAnalysisInput]
+    articles: List[ArticleAnalysisInput],
 ) -> List[ArticleAnalysisResult]:
     """
     This function takes in a list of LLM-ready article inputs, and runs the
@@ -161,7 +161,9 @@ async def run_article_analysis(
                 # We simply return the previous response instead of raising error.
                 # Since its structure is correct, this is acceptable as
                 # something is better than nothing.
-                print(f"Article Analysis output assertion failed, returning previous try response.\nError Details: {str(e)}")
+                print(
+                    f"Article Analysis output assertion failed, returning previous try response.\nError Details: {str(e)}"
+                )
                 return response
 
             # Run guardrails again, if failed, log and conitnue.

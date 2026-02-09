@@ -27,11 +27,19 @@ router = APIRouter(prefix="/articles", tags=["Articles"])
 @router.get(
     "/", response_model=ApiResponse, dependencies=[Depends(authenticate_request)]
 )
-async def get_articles(background_tasks: BackgroundTasks, concurrency: int = 2, limit: int = 16, gap_analysis: bool = True, competitor_analysis: bool = True) -> ApiResponse:
+async def get_articles(
+    background_tasks: BackgroundTasks,
+    concurrency: int = 2,
+    limit: int = 16,
+    gap_analysis: bool = True,
+    competitor_analysis: bool = True,
+) -> ApiResponse:
     try:
         # The pipeline is run in background to immediately return response to user
         # while processing continues. This prevents request timeouts on long running tasks.
-        background_tasks.add_task(run_pipeline, concurrency, limit, gap_analysis, competitor_analysis)
+        background_tasks.add_task(
+            run_pipeline, concurrency, limit, gap_analysis, competitor_analysis
+        )
 
         return ApiResponse(
             success=True,
@@ -42,7 +50,13 @@ async def get_articles(background_tasks: BackgroundTasks, concurrency: int = 2, 
         print("Exception Occurred: ", e)
         raise ApiError(status_code=500, payload="Internal Server Error", details=str(e))
 
-async def run_pipeline(concurrency: int = 2, limit: int = 16, gap_analysis: bool = True, competitor_analysis: bool = True) -> None:
+
+async def run_pipeline(
+    concurrency: int = 2,
+    limit: int = 16,
+    gap_analysis: bool = True,
+    competitor_analysis: bool = True,
+) -> None:
     """
     Runs the complete pipeline for scraping, analyzing, and updating Google Sheets.
     """
@@ -102,11 +116,10 @@ async def run_pipeline(concurrency: int = 2, limit: int = 16, gap_analysis: bool
         await run_in_threadpool(
             update_google_sheets,
             flattened_competitor_comparison,
-            "Competitor Comparison"
+            "Competitor Comparison",
         )
         await run_in_threadpool(
             update_google_sheets,
             flattened_competitor_analysis_insights,
-            "Strategic Insights & Recommendations"
+            "Strategic Insights & Recommendations",
         )
-
