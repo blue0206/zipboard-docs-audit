@@ -33,9 +33,9 @@ def flatten_articles_catalogue(articles: List[ArticlesCatalogue]) -> List[Dict]:
                 "Target Audience": article.target_audience.title(),
                 "Last Updated": article.last_updated,
                 "Word Count": article.word_count,
-                "Has Screenshots": article.has_screenshots,
-                "Has Videos": article.has_videos,
-                "Has Tables": article.has_tables,
+                "Has Screenshots": "✅ Yes" if article.has_screenshots else "❌ No",
+                "Has Videos": "✅ Yes" if article.has_videos else "❌ No",
+                "Has Tables": "✅ Yes" if article.has_tables else "❌ No",
             }
         )
 

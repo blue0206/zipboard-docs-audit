@@ -13,19 +13,19 @@ from gspread_formatting import (
 
 HEADER_FORMAT = CellFormat(
     backgroundColor={"red": 0.93, "green": 0.94, "blue": 0.96},
-    textFormat=TextFormat(bold=True, fontSize=16),
-    horizontalAlignment="CENTER",
-    wrapStrategy="WRAP",
-)
-
-TITLE_FORMAT = CellFormat(
     textFormat=TextFormat(bold=True, fontSize=13),
     horizontalAlignment="CENTER",
     wrapStrategy="WRAP",
 )
 
+TITLE_FORMAT = CellFormat(
+    textFormat=TextFormat(bold=True, fontSize=16),
+    horizontalAlignment="CENTER",
+    wrapStrategy="WRAP",
+)
+
 BODY_FORMAT = CellFormat(
-    horizontalAlignment="CENTER", verticalAlignment="TOP", wrapStrategy="WRAP"
+    horizontalAlignment="LEFT", verticalAlignment="MIDDLE", wrapStrategy="WRAP"
 )
 
 COLUMN_WIDTHS_ARTICLES_CATALOGUE = {
@@ -91,6 +91,7 @@ def update_google_sheets(
         "Gap Analysis",
         "Competitor Comparison",
         "Strategic Insights & Recommendations",
+        "test sheet"
     ],
 ) -> None:
     """
@@ -154,6 +155,8 @@ def update_google_sheets(
             update_worksheet_cols(worksheet, COLUMN_WIDTHS_COMP_COMPARISON)
         elif sheet_name == "Strategic Insights & Recommendations":
             update_worksheet_cols(worksheet, COLUMN_WIDTHS_INSIGHTS)
+        else:
+            update_worksheet_cols(worksheet, COLUMN_WIDTHS_ARTICLES_CATALOGUE)
 
         worksheet.update(rows)
         print(f"{sheet_name} sheet updated successfully.")
