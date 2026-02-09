@@ -11,7 +11,7 @@ from ..models.llm_schema import GuardrailResult
 from ..services.llm_service import llm_service
 
 
-async def run_gap_analysis(articles: List[GapAnalysisInput]) -> List[GapAnalysisResult]:
+async def run_gap_analysis(analysis_input: GapAnalysisInput) -> List[GapAnalysisResult]:
     """
     This function takes a list of articles (of zipBoard help docs),
     with each containing metadata and analysis results, and performs
@@ -27,12 +27,21 @@ async def run_gap_analysis(articles: List[GapAnalysisInput]) -> List[GapAnalysis
     SYSTEM_PROMPT = """
     You are a senior Technical Documentation Auditor.
 
+    You are performing a DOCUMENTATION-WIDE GAP ANALYSIS for zipBoard.
+
+    This is a CORPUS-LEVEL analysis.
+    You are NOT reviewing individual articles.
+
+    ---
+
     Documentation Structure Context:
     - A Collection is the highest-level grouping of documentation.
     - Each Collection contains multiple Categories.
     - Each Category contains multiple Articles.
     - Gaps may exist within categories, across categories in a collection,
     or across the entire documentation corpus.
+
+    ---
 
     Product Context:
     zipBoard is a visual feedback and bug tracking tool for digital content (Websites, PDFs, Images, Videos, SCORM, HTML). 
@@ -57,6 +66,8 @@ async def run_gap_analysis(articles: List[GapAnalysisInput]) -> List[GapAnalysis
     - Custom Roles & Permissions.
     - Organization Management.
 
+    ---
+
     Documentation Expectations:
     The documentation should effectively support:
     - New users onboarding into visual review and feedback workflows
@@ -65,20 +76,54 @@ async def run_gap_analysis(articles: List[GapAnalysisInput]) -> List[GapAnalysis
     - Enterprise admins configuring roles, permissions, and integrations
     - Advanced users working with APIs, automation, and CI/CD integrations
 
-    Your task is to perform a DOCUMENTATION-WIDE GAP ANALYSIS.
-    You are NOT reviewing individual articles in isolation.
+    ---
+
+    Your Role:
+    You are given a PRE-COMPUTED CORPUS SUMMARY consisting of:
+    - Coverage metrics
+    - Audience distribution
+    - Content type distribution
+    - Quality metrics
+    - Gap signals
+    - Structural observations
+
+    You MUST base your analysis STRICTLY on these metrics.
+
+    ---
+
+    Tool Usage (ALLOWED):
+    You MAY use tools (browser_automation, web_search, visit_website) ONLY to:
+    - Validate industry documentation norms
+    - Cross-check structural expectations
+    - Confirm standard documentation practices
+
+    You MUST NOT:
+    - Infer new zipBoard features
+    - Invent undocumented content
+    - Replace metric-based reasoning with assumptions
+
+    ---
 
     A "gap" means:
     - Important topics missing or under-covered
-    - Inconsistencies across articles or sections
+    - Missing or underrepresented guidance
     - Poor progression across user skill levels
     - Missing onboarding, conceptual grounding, or advanced guidance
     - Documentation that exists but does not sufficiently serve its audience
 
+    ---
+
     Priority Guidelines (IMPORTANT):
-    - High priority gaps should represent critical blockers to adoption, usability, or scale.
-    - Medium priority gaps should represent noticeable friction or incomplete guidance.
-    - Low priority gaps should represent polish, depth, or long-term improvements.
+    High:
+    - Blocks adoption, onboarding, or scale
+
+    Medium:
+    - Causes friction or incomplete understanding
+
+    Low:
+    - Depth, polish, or long-term improvement
+
+    ---
 
     You must:
     - Base every gap strictly on the provided input data
@@ -92,17 +137,26 @@ async def run_gap_analysis(articles: List[GapAnalysisInput]) -> List[GapAnalysis
     - Include medium and low priority gaps
     - Do NOT artificially inflate priority
 
-    Your output must be actionable, specific, and suitable for stakeholder review.
+    Your output must be:
+    - Evidence-backed
+    - Actionable
+    - Suitable for stakeholder review
     """
 
     USER_PROMPT = f"""
-    Below is a structured list of documentation articles with metadata and per-article analysis.
+    You are provided with a STRUCTURED CORPUS-LEVEL SNAPSHOT of zipBoard documentation.
 
-    Each item contains:
-    - Article metadata (category, collection, target audience, content type)
-    - Topics covered
-    - Quality score
-    - Identified gaps at the article level
+    This snapshot includes:
+    - Corpus summary (counts, structure, media usage)
+    - Coverage metrics (topics per category)
+    - Audience distribution and progression signals
+    - Content type distribution
+    - Quality metrics
+    - Gap density and structural observations
+
+    Documentation URL (for reference and validation): https://help.zipboard.co
+
+    ---
 
     Your task:
     1. Identify at least 5 documentation gaps that emerge across the entire corpus.
@@ -110,24 +164,28 @@ async def run_gap_analysis(articles: List[GapAnalysisInput]) -> List[GapAnalysis
         - High priority (critical blockers)
         - Medium priority (significant friction or inconsistency)
         - Low priority (depth, clarity, or long-term improvement)
-    2. Each gap must be:
-        - Clearly described
-        - Supported by evidence from multiple articles
-        - Relevant at a documentation-wide level (not article-specific)
-    3. Assign a priority (low / medium / high) based on user impact.
-    4. Clearly state who is affected (beginner / intermediate / advanced / mixed).
-    5. Provide a concrete recommendation for addressing each gap.
-    6. Suggest a suitable new article title or documentation addition where applicable.
+    2. Each gap must:
+        - Be documentation-wide (not article-specific)
+        - Be supported by multiple signals or patterns
+        - Clearly explain *why* it is a gap
+    3. Assign:
+        - Priority (low / medium / high)
+        - Affected audience (beginner / intermediate / advanced / mixed)
+    4. Provide:
+        - Clear evidence grounded in the metrics
+        - An actionable recommendation
+        - A suggested article or documentation addition (if applicable)
 
     Rules:
-    - Do NOT repeat the same gap using different wording.
     - Do NOT invent missing features or product behavior.
-    - Do NOT reference raw article content (only metadata and analysis).
-    - Evidence should reference recurring patterns across articles (e.g., repeated omissions, inconsistent coverage), not individual URLs.
+    - Do NOT restate metrics verbatim — interpret them
+    - Do NOT repeat the same gap using different wording.
+    - Do NOT speculate beyond the data
+    - Do NOT reference raw article content.
 
     ---
 
-    {[f"{article.model_dump_json()}\n" for article in articles]}
+    {analysis_input.model_dump_json()}
     """
 
     # Generate LLM response. The data returned is simple text.
@@ -137,10 +195,10 @@ async def run_gap_analysis(articles: List[GapAnalysisInput]) -> List[GapAnalysis
     ]
     text_response = await llm_service.get_llm_response_with_groq(input, mode="gap_analysis")
     # We run the response against a refiner model to return structured output.
-    structured_response = await refine_gap_analysis(articles, text_response)
+    structured_response = await refine_gap_analysis(analysis_input, text_response)
     return generate_gap_ids(structured_response.analysis)
 
-async def refine_gap_analysis(articles: List[GapAnalysisInput], response_text: str) -> GapAnalysisOutputList:
+async def refine_gap_analysis(analysis_input: GapAnalysisInput, response_text: str) -> GapAnalysisOutputList:
     """
     This function takes the textual gap analysis results and refines it
     into a structured format using another LLM.
@@ -158,32 +216,44 @@ async def refine_gap_analysis(articles: List[GapAnalysisInput], response_text: s
     Your role is to TRANSFORM an unstructured documentation gap analysis
     into a strictly structured output that conforms EXACTLY to the provided schema.
 
+    ---
+
     You MUST:
     - Preserve the meaning, intent, and substance of the input analysis
     - Convert each identified gap into ONE structured gap entry
     - Normalize wording without adding new ideas
     - Assign priority levels realistically (high / medium / low)
-    - Ensure at least 5 gaps exist in the final output
+    - Ensure at least 5 gaps exist if they are present in the input analysis.
+
+    ---
 
     If fewer than 4 high-priority gaps genuinely exist:
     - Include medium and low priority gaps
     - Do NOT artificially inflate priority
+
+    ---
 
     You MUST NOT:
     - Invent new gaps, topics, or product features
     - Introduce assumptions not present in the input
     - Remove valid gaps unless they are exact duplicates
     - Change the scope of analysis
+    - Reinterpret, re-derive, or recompute metrics.
+    - Fabricate gaps to meet count requirements.
+
+    You may ONLY normalize and structure the gaps already identified.
+    ---
 
     If the input contains:
     - Overlapping gaps: merge them into one coherent gap
     - Excessively high priorities: rebalance priority honestly
 
+    ---
+
     Priority Guidelines (IMPORTANT):
     - High priority gaps should represent critical blockers to adoption, usability, or scale.
     - Medium priority gaps should represent noticeable friction or incomplete guidance.
     - Low priority gaps should represent polish, depth, or long-term improvements.
-
     """
 
     USER_PROMPT=f"""
@@ -223,7 +293,7 @@ async def refine_gap_analysis(articles: List[GapAnalysisInput], response_text: s
     # We run the LLM response against a guardrail LLM to verify integrity and validate the response.
     # In case the guardrail returns issues, we retry ONCE, and run the guardrail again. In case
     # we encounter issue again, we simply log and return the response.
-    guardrail_results = await run_gap_analysis_guardrail(articles=articles, analysis=response.analysis)
+    guardrail_results = await run_gap_analysis_guardrail(analysis_input=analysis_input, analysis_output=response.analysis)
     if guardrail_results and not guardrail_results.is_valid:
         # Pass initial model response as string to preserve conversational context.
         input.append({"role": "assistant", "content": response.model_dump_json()})
@@ -247,7 +317,7 @@ async def refine_gap_analysis(articles: List[GapAnalysisInput], response_text: s
             return response
 
         # Run guardrails again, if failed, log and conitnue.
-        final_guardrail_results = await run_gap_analysis_guardrail(articles=articles, analysis=retried_response.analysis, fallback=True)
+        final_guardrail_results = await run_gap_analysis_guardrail(analysis_input=analysis_input, analysis_output=retried_response.analysis, fallback=True)
         if final_guardrail_results and not final_guardrail_results.is_valid:
             print(
                 f"Final guardrail failed for Competitor Analysis after retry. Issues: {final_guardrail_results.issues}"
@@ -258,8 +328,8 @@ async def refine_gap_analysis(articles: List[GapAnalysisInput], response_text: s
         return response
 
 async def run_gap_analysis_guardrail(
-    articles: List[GapAnalysisInput],
-    analysis: List[GapAnalysisOutput],
+    analysis_input: GapAnalysisInput,
+    analysis_output: List[GapAnalysisOutput],
     fallback: bool = False,
 ) -> GuardrailResult | None:
     """
@@ -277,13 +347,19 @@ async def run_gap_analysis_guardrail(
 
     SYSTEM_PROMPT = """
     You are an output validation and quality assurance system.
-
+    
     Your role is to evaluate documentation gap analysis results for:
     - Hallucinations
     - Weak or unsupported claims
     - Redundancy between gaps
     - Missing rationale or evidence
     - Overly generic or vague recommendations
+
+    The input analysis is based on PRE-COMPUTED CORPUS METRICS.
+    Flag issues if:
+    - Evidence contradicts provided metrics
+    - Gaps reference signals not present in the input
+    - Claims imply article-level inspection
 
     You must NOT:
     - Add new insights
@@ -297,7 +373,6 @@ async def run_gap_analysis_guardrail(
         4. Missing or weak rationale for priority
         5. Recommendations that are unclear or not actionable
 
-
     You must NOT:
     - Add new insights
     - Rewrite or improve the analysis
@@ -310,10 +385,10 @@ async def run_gap_analysis_guardrail(
 
     USER_PROMPT = f"""
     Input:
-        {[f"{article.model_dump_json()}\n" for article in articles]}
+        {analysis_input.model_dump_json()}
 
     Gap Analysis Results:
-        {[f"{result.model_dump_json()}\n" for result in analysis]}
+        {[f"{result.model_dump_json()}\n" for result in analysis_output]}
     """
 
     input: ResponseInputParam = [{"role": "user", "content": USER_PROMPT}]

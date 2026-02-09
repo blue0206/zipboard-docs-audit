@@ -7,7 +7,7 @@ from ..models.analysis_schema import CompetitorAnalysisOutput, GapAnalysisInput
 
 
 async def run_competitor_analysis(
-    articles: List[GapAnalysisInput],
+    analysis_input: GapAnalysisInput,
 ) -> CompetitorAnalysisOutput:
     """
     This function takes a list of articles (of zipBoard help docs),
@@ -46,6 +46,13 @@ async def run_competitor_analysis(
 
     You are evaluating DOCUMENTATION QUALITY, STRUCTURE, COVERAGE, and USEFULNESS.
     You are NOT evaluating product features or marketing claims.
+
+    ---
+    
+    You are provided with a PRE-COMPUTED DOCUMENTATION CORPUS SNAPSHOT for zipBoard, not individual articles.
+
+    You MUST evaluate competitor documentation in comparison to
+    zipBoard's OVERALL documentation structure, coverage, and quality.
 
     ---
 
@@ -104,6 +111,22 @@ async def run_competitor_analysis(
     """
 
     USER_PROMPT = f"""
+    zipBoard Documentation Context:
+    You are provided with a STRUCTURED CORPUS-LEVEL SNAPSHOT of zipBoard documentation.
+
+    This snapshot includes:
+    - Corpus summary (size, structure, media usage)
+    - Topic coverage by category
+    - Audience distribution and progression signals
+    - Content type distribution
+    - Quality metrics
+    - Identified documentation gap signals
+    - Structural observations
+
+    zipBoard docs URL (for reference): https://help.zipboard.co
+
+    ---
+
     Competitors to analyze:
     - BugHerd — https://support.bugherd.com/en/ | https://www.bugherd.com/api_v2
     - Userback - https://userback.io/guides/
@@ -113,24 +136,33 @@ async def run_competitor_analysis(
     - Filestage — https://help.filestage.io/
     - Ruttl - https://ruttl.com/support/
 
-    zipBoard Documentation Context:
-    Below is a structured list of documentation articles with metadata and per-article analysis.
-    zipBoard docs: https://help.zipboard.co
+    ---
 
-    Each item contains:
-    - Article metadata (category, collection, target audience, content type)
-    - Topics covered
-    - Quality score
-    - Identified gaps at the article level
+    YOUR TASK:
+    Using:
+    1. The provided zipBoard documentation corpus snapshot
+    2. Active research of competitor documentation portals
 
-    {[f"{article.model_dump_json()}\n" for article in articles]}
+    You must:
+    - Compare documentation STRUCTURE, DEPTH, and COVERAGE
+    - Identify where competitors outperform zipBoard
+    - Identify where zipBoard is ahead
+    - Surface industry documentation expectations
+    - Produce actionable documentation insights for zipBoard
 
     ---
 
-    Perform competitor documentation research and provide:
-    - Per-competitor documentation observations
-    - Cross-competitor patterns
-    - Insights relevant to improving zipBoard's documentation strategy
+    Rules:
+    - Do NOT evaluate product features
+    - Do NOT invent undocumented capabilities
+    - Base competitor claims ONLY on observed documentation
+    - Clearly separate observations from conclusions
+
+    ---
+
+    zipBoard Corpus Snapshot:
+
+    {analysis_input.model_dump_json()}
     """
 
     # Generate LLM response. The data returned is simple text.
@@ -307,6 +339,8 @@ async def run_competitor_analysis_guardrail(
     - Claims go beyond documentation analysis into product comparison
     - Output deviates from the required schema
     - Language is vague, generic, or unverifiable
+    - zipBoard weaknesses are claimed without support from the provided corpus snapshot
+    - Claims imply article-level inspection
 
     ---
 
