@@ -393,6 +393,17 @@ wheels = [
 ]
 
 [[package]]
+name = "gspread-formatting"
+version = "1.2.1"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "gspread" },
+]
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/26/71/b32df64c1bb97c2289f0916c6192d2d37cfc4a78b863b545b4b27142f3bc/gspread_formatting-1.2.1-py2.py3-none-any.whl", hash = "sha256:76bef0e751dc276bab666351035f15a818866dea5ca20603a34ae6c847333662", size = 22391, upload-time = "2025-03-07T20:24:53.474Z" },
+]
+
+[[package]]
 name = "h11"
 version = "0.16.0"
 source = { registry = "https://pypi.org/simple" }
@@ -1111,6 +1122,7 @@ dependencies = [
     { name = "fastapi", extra = ["standard"] },
     { name = "groq" },
     { name = "gspread" },
+    { name = "gspread-formatting" },
     { name = "httpx" },
     { name = "openai" },
     { name = "openpyxl" },
@@ -1126,6 +1138,7 @@ requires-dist = [
     { name = "fastapi", extras = ["standard"], specifier = ">=0.128.1" },
     { name = "groq", specifier = ">=1.0.0" },
     { name = "gspread", specifier = ">=6.2.1" },
+    { name = "gspread-formatting", specifier = ">=1.2.1" },
     { name = "httpx", specifier = ">=0.28.1" },
     { name = "openai", specifier = ">=2.16.0" },
     { name = "openpyxl", specifier = ">=3.1.5" },
