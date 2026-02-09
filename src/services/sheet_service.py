@@ -1,6 +1,7 @@
 import json
 import gspread
 from typing import Dict, List, Literal
+from gspread.utils import ValueInputOption
 from ..core.config import env_settings
 from gspread_formatting import (
     set_frozen,
@@ -25,7 +26,7 @@ TITLE_FORMAT = CellFormat(
 )
 
 BODY_FORMAT = CellFormat(
-    horizontalAlignment="LEFT", verticalAlignment="MIDDLE", wrapStrategy="WRAP"
+    verticalAlignment="MIDDLE", wrapStrategy="WRAP"
 )
 
 COLUMN_WIDTHS_ARTICLES_CATALOGUE = {
@@ -139,12 +140,12 @@ def update_google_sheets(
 
         # Style header
         format_cell_range(worksheet, "A2:Z2", HEADER_FORMAT)
-        set_row_height(worksheet, "2", 40)
+        set_row_height(worksheet, "2", 45)
         set_frozen(worksheet, rows=2)
 
         # Style body
         format_cell_range(worksheet, "A3: Z1000", BODY_FORMAT)
-        set_row_height(worksheet, "3:1000", 108)
+        set_row_height(worksheet, "3:1000", 140)
 
         # Set col width.
         if sheet_name == "Articles Catalogue":
@@ -158,7 +159,7 @@ def update_google_sheets(
         else:
             update_worksheet_cols(worksheet, COLUMN_WIDTHS_ARTICLES_CATALOGUE)
 
-        worksheet.update(rows)
+        worksheet.update(rows, value_input_option=ValueInputOption.user_entered)
         print(f"{sheet_name} sheet updated successfully.")
     except Exception as e:
         print(f"Error {sheet_name} sheet: {e}")
