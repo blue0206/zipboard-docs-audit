@@ -21,7 +21,7 @@ def flatten_articles_catalogue(articles: List[ArticlesCatalogue]) -> List[Dict]:
                 "Article Title": article.article_title,
                 "Collection": article.collection,
                 "Category": article.category,
-                "URL": article.url,
+                "URL": f'=HYPERLINK("{article.url}", "Article Link")',
                 "Content Type": article.content_type.title(),
                 "Topics Covered": "\n".join(
                     f"• {item}" for item in article.topics_covered
@@ -86,7 +86,7 @@ def flatten_competitor_comparison(
         flattened_data.append(
             {
                 "Competitor Name": data.competitor_name,
-                "Docs URL": data.docs_url,
+                "Docs URL": f'=HYPERLINK("{data.docs_url}", "Docs Link")',
                 "Docs Strengths": "\n".join(
                     f"• {item}" for item in data.docs_strengths
                 ),
