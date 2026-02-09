@@ -5,7 +5,6 @@ from ..analyzer.competitor_analysis import run_competitor_analysis
 from ..analyzer.gap_analysis import run_gap_analysis
 from ..analyzer.article_analysis import analyze_articles
 from ..services.sheet_service import (
-    update_competitor_analysis_sheet,
     update_google_sheets,
 )
 from ..utils.sheet_utils import (
@@ -101,7 +100,13 @@ async def run_pipeline(concurrency: int = 2, limit: int = 16, gap_analysis: bool
             competitor_analysis_result
         )
         await run_in_threadpool(
-            update_competitor_analysis_sheet,
+            update_google_sheets,
             flattened_competitor_comparison,
-            flattened_competitor_analysis_insights,
+            "Competitor Comparison"
         )
+        await run_in_threadpool(
+            update_google_sheets,
+            flattened_competitor_analysis_insights,
+            "Strategic Insights & Recommendations"
+        )
+
