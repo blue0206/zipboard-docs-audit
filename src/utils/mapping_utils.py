@@ -419,7 +419,7 @@ def compute_content_type_metrics(
             ],
             int,
         ],
-    ] = {}  # Field(description="The count of each content type per collection.")
+    ] = {}
     content_type_by_category: Dict[
         str,
         Dict[
@@ -428,7 +428,7 @@ def compute_content_type_metrics(
             ],
             int,
         ],
-    ] = {}  # Field(description="The count of each content type per category.")
+    ] = {}
     missing_content_types_by_category: Dict[
         str,
         List[
@@ -436,7 +436,7 @@ def compute_content_type_metrics(
                 "how-to", "conceptual", "faq", "reference", "troubleshooting", "mixed"
             ]
         ],
-    ] = {}  # Field(description="The content type missing for each category.")
+    ] = {}
 
     # Initialize dicts with collection and category keys and initial values using scraped data.
     for collection in scraped_data:
@@ -528,14 +528,14 @@ def compute_quality_metrics(
         )
         category_count = sum(quality_distribution.values())
 
-        average_quality = category_score / category_count
+        average_quality = category_score / category_count if category_count > 0 else 0
         average_quality_per_category[category] = average_quality
 
         total_score += category_score
         total_count += category_count
 
     # Compute global average quality score
-    average_quality_score = total_score / total_count
+    average_quality_score = total_score / total_count if total_count > 0 else 0
 
     # Find and store low quality categories
     for category, average in average_quality_per_category.items():
@@ -593,11 +593,11 @@ def compute_gap_signals(
             articles_with_gaps += 1
 
     # Total Identified Gaps / Number of articles with gaps
-    average_gaps_per_article = total_identified_gaps / articles_with_gaps
+    average_gaps_per_article = total_identified_gaps / articles_with_gaps if articles_with_gaps > 0 else 0
 
     # Compute gap density across categories.
     for category, gaps in gaps_per_category.items():
-        gap_density = gaps / articles_per_category[category]
+        gap_density = gaps / articles_per_category[category] if articles_per_category[category] > 0 else 0
 
         # Gap Density = Total Gaps in Category / Total Articles in Category
         gap_density_per_category[category] = gap_density
