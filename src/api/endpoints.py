@@ -15,8 +15,8 @@ from ..utils.sheet_utils import (
     flatten_gap_analysis_result,
 )
 from ..utils.mapping_utils import (
+    generate_gap_analysis_input,
     normalize_analyzed_articles_to_catalogue,
-    normalize_articles_to_gap_analysis_input,
     normalize_scraped_articles,
 )
 from ..scraper.scraper import run_scraper
@@ -73,8 +73,8 @@ async def run_pipeline(concurrency: int = 2, limit: int = 16, gap_analysis: bool
 
     # Normalize analyzed article data and the finalized article catalogue into LLM-ready
     # input for Gap Analysis. This input is also utilized for competitor analysis.
-    gap_analysis_input = normalize_articles_to_gap_analysis_input(
-        analyzed_articles=article_analysis_result, articles=articles_catalogue
+    gap_analysis_input = generate_gap_analysis_input(
+        scraped_data=scraped_data, articles=articles_catalogue
     )
 
     if gap_analysis:
