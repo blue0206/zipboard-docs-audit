@@ -314,7 +314,7 @@ async def refine_gap_analysis(
         """
         input.append({"role": "user", "content": RETRY_PROMPT})
         retried_response = await llm_service.get_llm_response(
-            system_prompt=SYSTEM_PROMPT, input=input, mode="refine_competitor_analysis"
+            system_prompt=SYSTEM_PROMPT, input=input, mode="refine_gap_analysis"
         )
 
         try:
