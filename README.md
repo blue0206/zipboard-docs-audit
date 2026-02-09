@@ -7,7 +7,7 @@ An ETL and Intelligence pipeline that automates the audit of the zipBoard Help C
 - [zipBoard Docs Audit \& Gap Analysis Agent](#zipboard-docs-audit--gap-analysis-agent)
   - [Table of Contents](#table-of-contents)
   - [Overview](#overview)
-  - [Upcoming Changes (WIP)](#upcoming-changes-wip)
+  - [Upcoming Changes (WIP, Post-Submission)](#upcoming-changes-wip-post-submission)
   - [High-Level Workflow](#high-level-workflow)
   - [LLM-Prompt Templates and Model Usage](#llm-prompt-templates-and-model-usage)
     - [Article Analysis](#article-analysis)
@@ -26,19 +26,21 @@ An ETL and Intelligence pipeline that automates the audit of the zipBoard Help C
 This system is an **Agentic Pipeline** exposed via a FastAPI endpoint. It scrapes the entire documentation site, analyzes the data using LLMs, performs a gap analysis, performs competitor analysis, and syncs the results to Google Sheets.
 
 
-## Upcoming Changes (WIP)
+## Upcoming Changes (WIP, Post-Submission)
 
-1. If you've looked at the context passed for Gap and Competitor Analysis, you must have realised IT IS NOT SCALABLE. Even though we're just passing metadata + analysis data, we're still easily overflowing the token limits (at articles >= 50). Hence we need to pass something which doesn't take too much space no matter how many articles there are. But HOW? Here's an idea:
+1. ~~If you've looked at the context passed for Gap and Competitor Analysis, you must have realised IT IS NOT SCALABLE. Even though we're just passing metadata + analysis data, we're still easily overflowing the token limits (at articles >= 50). Hence we need to pass something which doesn't take too much space no matter how many articles there are. But HOW? Here's an idea:~~
 
-    - Instead of passing the metadata and analysis data of each article, we instead pass a Corpus-Level:
-        - Summary: How many articles, categories, collections.
-        - Coverage Metrics: Topics frequency, topics distribution, undercovered topics, etc.
-        - Audience (Level) Metrics: Audience distribution, underserved audience, etc.
-        - Content Type Metrics: Missing content types, content type distribution, etc.
-        - and various other Metrics.
-        And this possible, easily, thanks to the data we get from Per-Article analysis!
+    - ~~Instead of passing the metadata and analysis data of each article, we instead pass a Corpus-Level:~~
+        - ~~Summary: How many articles, categories, collections.~~
+        - ~~Coverage Metrics: Topics frequency, topics distribution, undercovered topics, etc.~~
+        - ~~Audience (Level) Metrics: Audience distribution, underserved audience, etc.~~
+        - ~~Content Type Metrics: Missing content types, content type distribution, etc.~~
+        - ~~and various other Metrics.~~
+        ~~And this possible, easily, thanks to the data we get from Per-Article analysis!~~
 
-    > I could have done this before submission but I lost a whole day (no thanks to fever.)
+    > This is DONE. We can now comfortably scrape and process 380+ articles and from the data, calculate relevant metrics (similar to the ones mentioned above) and pass them as context without bloating.  
+    
+    > The NUMBERS: when processing all zipBoard articles, we've successfully reduced the input tokens from 44k to 8k by calculating metrics and allowing tool use (web research on zipBoard docs.)
 
 2. Currently, there's a single endpoint exposed which depends on Google Sheets scheduler. When run it perform: Scraping, Article Analysis, Gap Analysis, and Competitor Analysis. Therefore, this is SLOW (painfully so, even with asyncio). Here are the propsed changes:
 
