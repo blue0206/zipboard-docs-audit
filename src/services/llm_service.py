@@ -74,7 +74,7 @@ class LLMService:
         if mode == "article_analysis":
             return 0.25
         elif mode == "gap_analysis":
-            return 0.35
+            return 0.5
         elif mode == "competitor_analysis":
             return 0.65
         elif mode == "refine_competitor_analysis":
@@ -206,20 +206,6 @@ class LLMService:
             Returns unstructured, text output.
         """
         retries = 5
-
-        # compound custom tool choice. None for gap analysis.
-        compound_custom = None
-        if mode == "competitor_analysis":
-            compound_custom = {
-                "tools": {
-                    "enabled_tools": [
-                        "browser_automation",
-                        "web_search",
-                        "visit_website",
-                    ]
-                }
-            }
-
         model = COMPETITOR_ANALYSIS_RESEARCH_MODEL if mode == "competitor_analysis" else GAP_ANALYSIS_MODEL
 
         for attempt in range(retries):
@@ -232,8 +218,15 @@ class LLMService:
                     model=model,
                     messages=input,
                     temperature=self._get_temperature(mode),
-                    compound_custom=compound_custom, # type: ignore
-                    tool_choice="auto" if mode == "competitor_analysis" else "none",
+                    compound_custom={
+                        "tools": {
+                            "enabled_tools": [
+                                "browser_automation",
+                                "web_search",
+                                "visit_website",
+                            ]
+                        }
+                    }
                 )
 
                 content = response.choices[0].message.content
@@ -256,13 +249,13 @@ class LLMService:
                     wait_time += 1.0
 
                     print(
-                        f"Rate Limit ({COMPETITOR_ANALYSIS_RESEARCH_MODEL}). Sleeping {wait_time:.2f}s..."
+                        f"Rate Limit ({model}). Sleeping {wait_time:.2f}s..."
                     )
                     await asyncio.sleep(wait_time)
                     continue
 
                 # Log other API errors and continue.
-                print(f"API Error ({COMPETITOR_ANALYSIS_RESEARCH_MODEL}): {e}")
+                print(f"API Error ({model}): {e}")
 
             except Exception as e:
                 print(f"Exception occurred: {e}")
