@@ -42,35 +42,42 @@ This system is an **Agentic Pipeline** exposed via a FastAPI endpoint. It scrape
     
     > RESULT: when processing all zipBoard articles, we've successfully reduced the input tokens from 44k to 8k by calculating metrics and allowing tool use (web research on zipBoard docs.)
 
-2. Currently, there's a single endpoint exposed which depends on Google Sheets scheduler. When run it perform: Scraping, Article Analysis, Gap Analysis, and Competitor Analysis. Therefore, this is SLOW (painfully so, even with asyncio as it has to be throttled). Here are the propsed changes:
+2. Currently, the entire pipeline is run every 24 hours with a Google Sheets scheduler. The scheduler makes an API call to the endpoint and the API returns a Success with 202 and runs the pipeline in the background which performs: Scraping, Article Analysis, Gap Analysis, and Competitor Analysis. This works, but from the user perspective, there's no way to know progress or know when the data was updated on sheets. Also, this is SLOW (painfully so, even with asyncio as it has to be throttled.) Here are the propsed changes:
 
-    - Set up a scheduler in-app which scrapes ALL articles every 24 hours and stores in-memory (I think that's okay for now).
-    - Expose a single endpoint which ONLY performs the 3 analysis and updates sheets. We can introduce separate endpoints for them but that would be redundant work as Gap and Competitor Analysis depend on Article Analysis results. This alone greatly reduces the scraping time.
+    - We need to move the scheduler in-app. There's no need to keep it in sheets and make the user wait. A better approach here is to return a 200 Success response and update the sheets with cached data (stored in MongoDB or in-memory.)
 
 ## High-Level Workflow
 
 ![Workflow Diagram](./data/workflow.png)
 
-1.	Article Scraping
+1.	Article Scraping 
+
     Help Center articles are scraped and normalized into structured inputs. (See [scraper.py](./src/scraper/scraper.py))
 2.	Article-Level Analysis
+
     Each article is analyzed independently using schema-constrained LLMs to extract metadata, coverage depth, user level, and clarity signals. (See [article_analysis.py](./src/analyzer/article_analysis.py))
 3.	Spreadsheet Update — Articles Catalog
+
     Article-level results are flattened and written to the Article Catalog worksheet.
 4.	Gap Analysis (Documentation-wide)
-    All article analyses are aggregated and passed through a two-stage LLM pipeline (see [gap_analysis.py](./src/analyzer/gap_analysis.py)):
+
+    We compute corpus-level metrics from the scraped data and analyzed articles and provide as context to LLM to perform Gap Analysis with web search (see [gap_analysis.py](./src/analyzer/gap_analysis.py)):
     - A research model produces a holistic textual gap analysis. 
     - A refiner model converts the text into a strict structured schema.   
 5.	Spreadsheet Update — Gap Analysis
+
     Identified documentation gaps (high / medium / low priority) are written to a dedicated worksheet.
 6.	Competitor Analysis
-    Using the same article corpus as context, the system performs competitor documentation research and comparison, producing (see [competitor_analysis.py](./src/analyzer/competitor_analysis.py)):
+
+    Using web search on zipBoard and provided competitor docs, the system performs competitor documentation research and comparison, producing (see [competitor_analysis.py](./src/analyzer/competitor_analysis.py)):
+
     - A competitor comparison table.  
     - A competitor analysis insights table.  
 7.	Spreadsheet Update — Competitor Analysis
-    Both competitor tables are written to a single worksheet.
 
-- You can also understand the high-level workflow by reading the comments in `run_pipeline` function of [endpoints.py](./src/api/endpoints.py)
+    Both competitor tables are written to worksheet.
+
+You can also understand the high-level workflow by reading the comments in `run_pipeline` function of [endpoints.py](./src/api/endpoints.py)
 
 ## LLM-Prompt Templates and Model Usage
 
