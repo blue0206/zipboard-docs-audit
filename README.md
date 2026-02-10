@@ -38,11 +38,11 @@ This system is an **Agentic Pipeline** exposed via a FastAPI endpoint. It scrape
         - ~~and various other Metrics.~~
         ~~And this possible, easily, thanks to the data we get from Per-Article analysis!~~
 
-    > This is DONE. We can now comfortably scrape and process 380+ articles and from the data, calculate relevant metrics (similar to the ones mentioned above) and pass them as context without bloating.  
+    > COMPLETED. We can now comfortably scrape and process 380+ articles, and from the processed data, calculate relevant metrics (similar to the ones mentioned above) and pass them as context without bloating the memory.  
     
-    > The NUMBERS: when processing all zipBoard articles, we've successfully reduced the input tokens from 44k to 8k by calculating metrics and allowing tool use (web research on zipBoard docs.)
+    > RESULT: when processing all zipBoard articles, we've successfully reduced the input tokens from 44k to 8k by calculating metrics and allowing tool use (web research on zipBoard docs.)
 
-2. Currently, there's a single endpoint exposed which depends on Google Sheets scheduler. When run it perform: Scraping, Article Analysis, Gap Analysis, and Competitor Analysis. Therefore, this is SLOW (painfully so, even with asyncio). Here are the propsed changes:
+2. Currently, there's a single endpoint exposed which depends on Google Sheets scheduler. When run it perform: Scraping, Article Analysis, Gap Analysis, and Competitor Analysis. Therefore, this is SLOW (painfully so, even with asyncio as it has to be throttled). Here are the propsed changes:
 
     - Set up a scheduler in-app which scrapes ALL articles every 24 hours and stores in-memory (I think that's okay for now).
     - Expose a single endpoint which ONLY performs the 3 analysis and updates sheets. We can introduce separate endpoints for them but that would be redundant work as Gap and Competitor Analysis depend on Article Analysis results. This alone greatly reduces the scraping time.
