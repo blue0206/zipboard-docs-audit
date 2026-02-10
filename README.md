@@ -9,10 +9,17 @@ An ETL and Intelligence pipeline that automates the audit of the zipBoard Help C
   - [Overview](#overview)
   - [Upcoming Changes (WIP, Post-Submission)](#upcoming-changes-wip-post-submission)
   - [High-Level Workflow](#high-level-workflow)
+    - [1. Article Scraping (scraper.py)](#1-article-scraping-scraperpy)
+    - [2. Article-Level Analysis (article\_analysis.py)](#2-article-level-analysis-article_analysispy)
+    - [3. Spreadsheet Update — Articles Catalog](#3-spreadsheet-update--articles-catalog)
+    - [4. Gap Analysis (gap\_analysis.py)](#4-gap-analysis-gap_analysispy)
+    - [5. Spreadsheet Update — Gap Analysis](#5-spreadsheet-update--gap-analysis)
+    - [6. Competitor Analysis (competitor\_analysis.py)](#6-competitor-analysis-competitor_analysispy)
+    - [7. Spreadsheet Update — Competitor Analysis](#7-spreadsheet-update--competitor-analysis)
   - [LLM-Prompt Templates and Model Usage](#llm-prompt-templates-and-model-usage)
     - [Article Analysis](#article-analysis)
-      - [System Prompt:](#system-prompt)
-      - [User Prompt:](#user-prompt)
+      - [System Prompt](#system-prompt)
+      - [User Prompt](#user-prompt)
     - [Gap Analysis](#gap-analysis)
       - [System Prompt](#system-prompt-1)
       - [User Prompt](#user-prompt-1)
@@ -25,6 +32,7 @@ An ETL and Intelligence pipeline that automates the audit of the zipBoard Help C
 
 This system is an **Agentic Pipeline** exposed via a FastAPI endpoint. It scrapes the entire documentation site, analyzes the data using LLMs, performs a gap analysis, performs competitor analysis, and syncs the results to Google Sheets.
 
+> [Sheets Link](https://docs.google.com/spreadsheets/d/15Qq8_9WdaMQeyV0np8ILQg2Ym12PJmCwJbSlAy9RvbQ/edit?usp=sharing)
 
 ## Upcoming Changes (WIP, Post-Submission)
 
@@ -42,7 +50,7 @@ This system is an **Agentic Pipeline** exposed via a FastAPI endpoint. It scrape
     
     > RESULT: when processing all zipBoard articles, we've successfully reduced the input tokens for Gap Analysis from 44k to 8k by calculating metrics and allowing tool use (web research on zipBoard docs.)
 
-2. Currently, the entire pipeline is run every 24 hours with a Google Sheets scheduler. The scheduler makes an API call to the endpoint and the API returns a Success with 202 and runs the pipeline in the background which performs: Scraping, Article Analysis, Gap Analysis, and Competitor Analysis. This works, but from the user perspective, there's no way to know progress or know when the data was updated on sheets. Also, this is SLOW (painfully so, even with asyncio as it has to be throttled.) Here are the propsed changes:
+2. Currently, the entire pipeline is run every 24 hours with a Google Sheets scheduler. The scheduler makes an API call to the endpoint and the API returns a Success with 202 and runs the pipeline in the background which performs: Scraping, Article Analysis, Gap Analysis, and Competitor Analysis. This works, but from the user perspective, there's no way to know progress or know when the data was updated on sheets. Also, this is SLOW (painfully so, even with asyncio as it has to be throttled.) Here are the proposed changes:
 
     - We need to move the scheduler in-app. There's no need to keep it in sheets and make the user wait. A better approach here is to return a 200 Success response and update the sheets with cached data (stored in MongoDB or in-memory.)
 
@@ -61,43 +69,58 @@ This looks so much better 😤
 
 ![Workflow Diagram](./data/workflow-ai.png)
 
-1.	Article Scraping 
+<br>
+<br>
 
-    Help Center articles are scraped and normalized into structured inputs. (See [scraper.py](./src/scraper/scraper.py))
-2.	Article-Level Analysis
+> You can also understand the high-level workflow by reading the comments in `run_pipeline` function of [endpoints.py](./src/api/endpoints.py)
 
-    Each article is analyzed independently using schema-constrained LLMs to extract metadata, coverage depth, user level, and clarity signals. (See [article_analysis.py](./src/analyzer/article_analysis.py))
-3.	Spreadsheet Update — Articles Catalog
+###	1. Article Scraping ([scraper.py](./src/scraper/scraper.py))
 
-    Article-level results are flattened and written to the Article Catalog worksheet.
-4.	Gap Analysis (Documentation-wide)
+- Help Center articles are scraped and normalized into structured inputs.
+- Used semaphore to prevent fetching all 380+ articles concurrently.
+    
+### 2. Article-Level Analysis ([article_analysis.py](./src/analyzer/article_analysis.py))
 
-    We compute corpus-level metrics from the scraped data and analyzed articles and provide as context to LLM to perform Gap Analysis with web search (see [gap_analysis.py](./src/analyzer/gap_analysis.py)):
-    - A research model produces a holistic textual gap analysis. 
-    - A refiner model converts the text into a strict structured schema.   
-5.	Spreadsheet Update — Gap Analysis
+- Each article is analyzed independently using LLMs to extract metadata, coverage depth, user level, and clarity signals.
+- The context passed includes article metadata and trimmed content (limited to 11,000 characters or ~2500 tokens).
+- If we use a single model here, we would hit the Token per Day (TPD) limit in no time given the number of articles. Therefore, we use multiple LLM models with rotation. (See [llm_service.py](./src/services/llm_service.py))
+- Even with model rotation, we cannot make concurrent requests for all articles, as we will frequently hit Token per Minute (TPM) limits. Therefore, we use Semaphore to limit the number of concurrent requests and ensure the LLM API has enough time to refresh per-minute limits.
 
-    Identified documentation gaps (high / medium / low priority) are written to a dedicated worksheet.
-6.	Competitor Analysis
+### 3. Spreadsheet Update — Articles Catalog
 
-    Using web search on zipBoard and provided competitor docs, the system performs competitor documentation research and comparison, producing (see [competitor_analysis.py](./src/analyzer/competitor_analysis.py)):
+- Article-level results are flattened and written to the Article Catalog worksheet.
 
-    - A competitor comparison table.  
-    - A competitor analysis insights table.  
-7.	Spreadsheet Update — Competitor Analysis
+### 4. Gap Analysis ([gap_analysis.py](./src/analyzer/gap_analysis.py))
 
-    Both competitor tables are written to worksheet.
+- The Gap Analysis needs to be documentation-wide. However, we cannot simply pass details about each and every article we've processed as this would easily exceed the token limits of LLM (even after excluding article content!) To solve this problem, we do two things:
+  - use a model which can use web search/visit tools (`groq/compound`) to investigate zipBoard docs
+  - instead of passing metadata of each and every article, compute relevant corpus-level metrics which can be considered for analysis (see [analysis_schema.py](./src/models/analysis_schema.py) for the input schema and [mapping_utils.py](./src/utils/mapping_utils.py) for computation implementation.)
 
-You can also understand the high-level workflow by reading the comments in `run_pipeline` function of [endpoints.py](./src/api/endpoints.py)
+- Since the researcher model (`groq/compound`) cannot return structured outputs, we pass the textual output to a refiner LLM (`gpt-oss-120b`) to return a structured output mapped to the provided schema for display on sheets.
+
+### 5. Spreadsheet Update — Gap Analysis
+
+Identified documentation gaps are written to a dedicated worksheet.
+
+### 6. Competitor Analysis ([competitor_analysis.py](./src/analyzer/competitor_analysis.py))
+
+- Competitor analysis involves research work. We have to research competitor docs and zipBoard docs and need relevant insights.
+- For this purpose, there is no need for any derived context. Therefore, we rely purely on web search/visit tools.
+- The LLM (`groq/compound`) is provided via prompt, a list of competitors and their docs url and also the docs url of zipBoard, and is tasked with generating:
+  - comparison data about the strengths and weaknesses of competitor docs, their coverage, and docs structure.
+  - relevant insights for zipBoard with type (gap, opportunity, industrial expectation, or advantage), evidence, impact levels and recommended actions.
+- Again, since the researcher model (`groq/compound`) cannot return structured outputs, we pass the textual output to a refiner LLM (`gpt-oss-120b`) to return a structured output mapped to the provided schema and ALSO assign a confidence score to each generated item for display on sheets.
+
+### 7. Spreadsheet Update — Competitor Analysis
+
+Both competitor tables are written to worksheet.
+
 
 ## LLM-Prompt Templates and Model Usage
 
 ### Article Analysis
 
-- The articles are processed by LLMs one-by-one. Therefore, we perform this task asynchronously but with semaphores to control concurrency and prevent rate limiting.
-- Since we want to reduce the rate limiting, we rotate between multiple LLMs for article analysis. This greatly reduces rate limits even with 380+ articles! (See [llm_service.py](./src/services/llm_service.py))
-
-#### System Prompt:
+#### System Prompt
 
 ```
 You are a documentation quality analyst evaluating a single help article.
@@ -140,7 +163,7 @@ Rules:
 - Return output strictly in the required structured format
 ```
 
-#### User Prompt:
+#### User Prompt
 
 ```
 Article Metadata:
