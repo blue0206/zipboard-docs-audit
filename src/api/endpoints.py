@@ -84,13 +84,12 @@ async def run_pipeline(
 
     # 3. ---------------------------Gap Analysis---------------------------------
 
-    # Normalize analyzed article data and the finalized article catalogue into LLM-ready
-    # input for Gap Analysis. This input is also utilized for competitor analysis.
-    gap_analysis_input = generate_gap_analysis_input(
-        scraped_data=scraped_data, articles=articles_catalogue
-    )
-
     if gap_analysis:
+        # Normalize analyzed article data and the finalized article catalogue into LLM-ready
+        # input for Gap Analysis.
+        gap_analysis_input = generate_gap_analysis_input(
+            scraped_data=scraped_data, articles=articles_catalogue
+        )
         gap_analysis_result = await run_gap_analysis(gap_analysis_input)
 
         # Flatten gap analysis results into dict and update spreadsheet.
@@ -101,7 +100,7 @@ async def run_pipeline(
 
     if competitor_analysis:
         # Perform competitor analysis. It requires the same context as gap analysis.
-        competitor_analysis_result = await run_competitor_analysis(gap_analysis_input)
+        competitor_analysis_result = await run_competitor_analysis()
 
         # We represent competitor analysis in 2 tables:
         # a. Competitor Comparison

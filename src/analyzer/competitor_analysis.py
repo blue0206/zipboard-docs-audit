@@ -3,20 +3,14 @@ from openai.types.responses import ResponseInputParam
 from groq.types.chat import ChatCompletionMessageParam
 from ..services.llm_service import llm_service
 from ..models.llm_schema import GuardrailResult
-from ..models.analysis_schema import CompetitorAnalysisOutput, GapAnalysisInput
+from ..models.analysis_schema import CompetitorAnalysisOutput
 
 
-async def run_competitor_analysis(
-    analysis_input: GapAnalysisInput,
-) -> CompetitorAnalysisOutput:
+async def run_competitor_analysis() -> CompetitorAnalysisOutput:
     """
-    This function takes a list of articles (of zipBoard help docs),
-    with each containing metadata and analysis results, and performs
-    competitor analysis by using web search and related tools to explore
-    the competitor docs.
-
-    Args:
-        - articles: A list of LLM-ready article inputs for gap analysis.
+    This function performs competitor analysis by using web search and related tools
+    to explore the competitor docs. The analysis is fully research-driven, and zipBoard
+    documentation is inspected via web research rather than injected context.
 
     Returns:
         The competitor analysis result of the docs.
@@ -39,20 +33,13 @@ async def run_competitor_analysis(
 
     ---
 
-    Documentation Structure Context:
+    zipBoard Documentation Structure Context:
     - A Collection is the highest-level grouping of documentation.
     - Each Collection contains multiple Categories.
     - Each Category contains multiple Articles.
 
     You are evaluating DOCUMENTATION QUALITY, STRUCTURE, COVERAGE, and USEFULNESS.
     You are NOT evaluating product features or marketing claims.
-
-    ---
-    
-    You are provided with a PRE-COMPUTED DOCUMENTATION CORPUS SNAPSHOT for zipBoard, not individual articles.
-
-    You MUST evaluate competitor documentation in comparison to
-    zipBoard's OVERALL documentation structure, coverage, and quality.
 
     ---
 
@@ -84,20 +71,16 @@ async def run_competitor_analysis(
     Your Objectives:
     1. Analyze competitor documentation portals listed below.
     2. Identify documentation strengths, weaknesses, and patterns.
-    3. Compare competitor documentation approaches against zipBoard's current documentation coverage (provided separately).
+    3. Compare competitor documentation approaches against zipBoard's documentation.
     4. Derive actionable insights that inform how zipBoard can improve its documentation strategy.
 
-    You MUST:
-    - Actively research zipBoard documentation in addition to competitor documentation
-    - Use the provided corpus snapshot only as orientation
-    - Resolve uncertainties by inspecting zipBoard docs directly
+    You MUST Actively research zipBoard documentation in addition to competitor documentation
 
     ---
 
     Constraints & Rules:
     - Base findings ONLY on publicly available documentation.
     - Do NOT invent undocumented features.
-    - Clearly separate observed facts from inferred conclusions.
     - Be concise, structured, and evidence-backed.
     - Focus on documentation quality, not product superiority claims.
 
@@ -115,19 +98,7 @@ async def run_competitor_analysis(
     Your output will be used directly for stakeholder review and spreadsheet reporting.
     """
 
-    USER_PROMPT = f"""
-    zipBoard Documentation Context:
-    You are provided with a STRUCTURED CORPUS-LEVEL SNAPSHOT of zipBoard documentation.
-
-    This snapshot includes:
-    - Corpus summary (size, structure, media usage)
-    - Topic coverage by category
-    - Audience distribution and progression signals
-    - Content type distribution
-    - Quality metrics
-    - Identified documentation gap signals
-    - Structural observations
-
+    USER_PROMPT = """
     zipBoard docs URL (for reference): https://help.zipboard.co
 
     ---
@@ -144,9 +115,7 @@ async def run_competitor_analysis(
     ---
 
     YOUR TASK:
-    Using:
-    1. The provided zipBoard documentation corpus snapshot
-    2. Active research of competitor documentation portals
+    Using active research of competitor documentation portals
 
     You must:
     - Compare documentation STRUCTURE, DEPTH, and COVERAGE
@@ -162,12 +131,6 @@ async def run_competitor_analysis(
     - Do NOT invent undocumented capabilities
     - Base competitor claims ONLY on observed documentation
     - Clearly separate observations from conclusions
-
-    ---
-
-    zipBoard Corpus Snapshot:
-
-    {analysis_input.model_dump_json()}
     """
 
     # Generate LLM response. The data returned is simple text.
