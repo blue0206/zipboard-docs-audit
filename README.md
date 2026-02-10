@@ -40,7 +40,7 @@ This system is an **Agentic Pipeline** exposed via a FastAPI endpoint. It scrape
 
     > COMPLETED. We can now comfortably scrape and process 380+ articles, and from the processed data, calculate relevant metrics (similar to the ones mentioned above) and pass them as context without bloating the memory.  
     
-    > RESULT: when processing all zipBoard articles, we've successfully reduced the input tokens from 44k to 8k by calculating metrics and allowing tool use (web research on zipBoard docs.)
+    > RESULT: when processing all zipBoard articles, we've successfully reduced the input tokens for Gap Analysis from 44k to 8k by calculating metrics and allowing tool use (web research on zipBoard docs.)
 
 2. Currently, the entire pipeline is run every 24 hours with a Google Sheets scheduler. The scheduler makes an API call to the endpoint and the API returns a Success with 202 and runs the pipeline in the background which performs: Scraping, Article Analysis, Gap Analysis, and Competitor Analysis. This works, but from the user perspective, there's no way to know progress or know when the data was updated on sheets. Also, this is SLOW (painfully so, even with asyncio as it has to be throttled.) Here are the propsed changes:
 
@@ -48,7 +48,18 @@ This system is an **Agentic Pipeline** exposed via a FastAPI endpoint. It scrape
 
 ## High-Level Workflow
 
-![Workflow Diagram](./data/workflow.png)
+<details>
+<summary>Click to see the original diagram made by me 👀</summary>
+
+![Workflow Diagram (Handmade)](./data/workflow.png)
+
+This looks so much better 😤
+</details>
+
+<br>
+<br>
+
+![Workflow Diagram](./data/workflow-ai.png)
 
 1.	Article Scraping 
 
