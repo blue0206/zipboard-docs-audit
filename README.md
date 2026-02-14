@@ -51,9 +51,19 @@ This system is an **Agentic Pipeline** exposed via a FastAPI endpoint. It scrape
     
     > RESULT: when processing all zipBoard articles, we've successfully reduced the input tokens for Gap Analysis from 44k to 8k by calculating metrics and allowing tool use (web research on zipBoard docs.)
 
-2. Currently, the entire pipeline is run every 24 hours with a Google Sheets scheduler. The scheduler makes an API call to the endpoint and the API returns a Success with 202 and runs the pipeline in the background which performs: Scraping, Article Analysis, Gap Analysis, and Competitor Analysis. This works, but from the user perspective, there's no way to know progress or know when the data was updated on sheets. Also, this is SLOW (painfully so, even with asyncio as it has to be throttled.) Here are the proposed changes:
-
-    - We need to move the scheduler in-app. There's no need to keep it in sheets and make the user wait. A better approach here is to return a 200 Success response and update the sheets with cached data (stored in MongoDB or in-memory.)
+2. The initial architecture was heavily optimized for strict rate limits (Groq Free Tier), necessitating complex semaphores and corpus-level aggregation to save tokens. However, we can utilize platforms with significantly higher throughput for high-volume analysis without sacrificing context. Proposed changes:
+   
+   - Integrate LiteLLM to make the system client-agnostic.
+   - Move the current Groq-optimized implementation to a `legacy-groq` branch. The `main` branch will utilize **Google Gemini** for high-volume processing.
+   - Remove refiner model and output refinement as Gemini SOTA models can return structured output.
+   - Refactor guardrails to use Recursive Self-Reflection where SOTA model critiques its own output. (Better than using a weaker model to critique the same. Conversely, if we had access to OpenAI/Anthropic, we can use their SOTA model as guardrail.)
+   
+   > **Why didn't I use Gemini from the start?**  
+   > Honestly, I misread the Google AI docs early in my GenAI journey (over a month ago). I confused "Requests Per Day" with "Tokens Per Day" and assumed Google was too restrictive. 
+   >
+   > However, I recently made a deep-dive into **Groq's LPU architecture** and asked myself: *"If Groq's SRAM is expensive and memory-constrained, how can Google's TPU clusters offer lower limits?"* It didn't make sense! Hence, I rechecked the Google rate limits and realized—I had messed up. Gemini rate limits are MASSIVE.
+   >
+   > **But I don't regret it.** If I had known this, I never would've gone to such depths to optimize my app to process all 380+ articles given the strict rate limits of Groq.
 
 ## High-Level Workflow
 
